@@ -10,6 +10,9 @@
 
 <parm name="eHIJING:qhat0g" default="0.1" min="0.001" max="1.0"> 
 </parm> 
+
+<parm name="eHIJING:mu2" default="0.04" min="0.001" max="0.16"> 
+</parm> 
  
 </chapter> 
  

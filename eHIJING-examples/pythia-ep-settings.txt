@@ -1,0 +1,56 @@
+# Modified from Pythia Sample Program main36.cc,
+# which sets up eP collisions at HERA
+
+# random seed, seed=0 --> time-dependent seed
+Random:setSeed = on
+Random:seed = 0
+
+# beam info (make sure the order matches the main program)
+Beams:idA = 2212 
+Beams:idB = 11
+Beams:frameType = 2
+Beams:eA = 0.94 # proton beam energy (+,0,0,+) [GeV]
+Beams:eB = 27.6 # electron beam energy (+,0,0,-) [GeV]
+
+# Phasespace cut:
+# Minimum hard scale squared [GeV^2]
+PhaseSpace:Q2Min = 1.0
+
+# >>>>>> Do not change the following without a good reason...
+WeakBosonExchange:ff2ff(t:gmZ) = on
+WeakBosonExchange:ff2ff(t:W) = off
+
+SpaceShower:QCDshower = on
+SpaceShower:dipoleRecoil = off
+SpaceShower:pTmaxMatch = 1
+
+TimeShower:QCDshower = on
+TimeShower:pTmaxMatch = 1
+TimeShower:interleave = off
+TimeShower:phiPolAsym = on
+TimeShower:QEDshowerByL = off
+PDF:lepton = off
+# <<<<<< Do not change aboves without a good reason...
+
+
+# eHIJING Switch and other commonly used switches
+TimeShower:pTmin = 1.
+eHIJING:all = on
+eHIJING:AtomicNumber = 131 # R = 1.12 fm * A^{1/3}
+eHIJING:qhat0g = .06 # GeV^2/fm
+eHIJING:mu2 = 0.09 # Gev^2
+
+HadronLevel:all = off
+HadronLevel:decay = off
+
+PDF:pset = 8
+PDF:useHard = on
+PDF:useHardNPDFA = on
+PDF:nPDFSetA = 2
+PDF:nPDFBeamA = 100541310 # nuclei = 10LZZZAAAI
+
+
+
+
+
+

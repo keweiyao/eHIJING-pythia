@@ -108,7 +108,7 @@ void TimeShower::init( BeamParticle* beamAPtrIn,
   allowMPIdipole     = settingsPtr->flag("TimeShower:allowMPIdipole");
   // WK: eHIJING flag and qhat0g
   eHIJING            = settingsPtr->flag("eHIJING:all");
-  qhat0g              = settingsPtr->parm("eHIJING:qhat0g") / 5.076; // GeV^3
+  qhat0g             = settingsPtr->parm("eHIJING:qhat0g") / 5.076; // GeV^3
   AtomicNumber       = settingsPtr->parm("eHIJING:AtomicNumber");
 
   // If SpaceShower does dipole recoil then TimeShower must adjust.
@@ -2261,7 +2261,6 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
             dip.z = 1. - zMinAbs * pow( 1. / zMinAbs - 1., rndmPtr->flat() );
           } 
           else{
-            auto & p = event[dip.iRadiator];
             double acceptance = 1;
             do{
               dip.z = 1. - zMinAbs * pow( 1. / zMinAbs - 1., rndmPtr->flat() );

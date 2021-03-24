@@ -10,6 +10,14 @@
 
 namespace Pythia8 {
 
+double phase2(double x){
+   if (x<3.2){
+       return x/6. - pow3(x)/360.;
+   }else{
+       return M_PI/4. - 1./x + std::cos(x)/pow3(x);
+   }
+}
+
 //==========================================================================
 
 // The PartonLevel class.
@@ -75,14 +83,16 @@ bool PartonLevel::init( Info* infoPtrIn, Settings& settings,
   sampleTypeDiff     = (doHardDiff) ? settings.mode("Diffraction:sampleType")
                      : 0;
   eHIJING            = settings.flag("eHIJING:all"); // WK: eHIJING
+  qhat0g             = settings.parm("eHIJING:qhat0g");
+  AtomicNumber       = settings.parm("eHIJING:AtomicNumber");
+  mu2                = settings.parm("eHIJING:mu2");
+  Q0                 = settings.parm("TimeShower:pTmin");
 
   // Separate low-mass (unresolved) and high-mass (perturbative) diffraction.
   mMinDiff           = settings.parm("Diffraction:mMinPert");
   mWidthDiff         = settings.parm("Diffraction:mWidthPert");
   pMaxDiff           = settings.parm("Diffraction:probMaxPert");
   if (mMinDiff > infoPtr->eCM()) doDiffraction = false;
-
-  AtomicNumber       = settings.flag("eHIJING:AtomicNumber"); // WK: Atomic Number
 
   // Set whether photon inside lepton. Mode updated event-by-event.
   gammaMode          = settings.mode("Photon:ProcessType");
@@ -663,7 +673,6 @@ bool PartonLevel::next( Event& process, Event& event) {
         pTgen = max( pTgen, mergingHooksPtr->getShowerStoppingScale() );
 
       // WK: determine possible pTnext in FSR
-      // std::cout <<"doFSR? "<< doFSRduringProcess << std::endl;
       double pTtimes = (doFSRduringProcess)
         ? timesPtr->pTnext( event, pTmaxFSR, pTgen, isFirstTrial, doTrial)
         : -1.;
@@ -973,6 +982,57 @@ bool PartonLevel::next( Event& process, Event& event) {
         infoPtr->addCounter(31);
 
       } while (pTmax > 0.  && (nBranchMax <= 0 || nBranch < nBranchMax) );
+    }
+
+    // WK >>>
+    // After parton shower, do energy loss to mimic in-medium fragmenation
+    // below Q0 scale
+    if (eHIJING && mu2<Q0*Q0){
+    std::vector<Particle> plist;
+    for (int ip=0; ip<event.size(); ip++){
+       auto & p = event[ip];
+       if (p.isFinal() && p.isParton()){
+         double a0 = 4.*M_PI/9./std::log(Q0*Q0/0.04);
+         double CR = p.idAbs()==21 ? 3. : 4./3.;
+         double zmax = p.idAbs()==21 ? 0.5 : 1.0;
+         double vx = p.px()/p.pAbs(),
+                vy = p.py()/p.pAbs(),
+                vz = p.pz()/p.pAbs();
+         double xdotv = event.Rx()*vx + event.Ry()*vy + event.Rz()*vz;
+         double R2 = pow2(1.12*pow(AtomicNumber,1./3.)*5.076), 
+                x2 = pow2(event.Rx())+pow2(event.Ry())+pow2(event.Rz());
+         double L = -xdotv + std::sqrt((R2-x2)+xdotv*xdotv);
+
+         double zmin = .1/p.e();
+         double z = zmax;
+         Vec4 pnew = p.p();
+
+         while(z>zmin){
+           double acceptance = 1.;
+           do{
+              double phasemax = 
+                        phase2((Q0*Q0)*L/2./zmin/pnew.e())
+                              - phase2(mu2*L/2./z/p.e());
+              double invpowers = a0*CR/M_PI*qhat0g*L*L/p.e()*phasemax;
+              z = 1./(1./z-std::log(rndmPtr->flat())/invpowers);
+              double Q2max = std::max(std::min(Q0*Q0,
+                                      pow2(z*p.e()) ),mu2);
+              double phase_corr = phase2((Q2max)*L/2./z/p.e())
+                                - phase2(mu2*L/2./z/p.e());
+              acceptance = phase_corr/phasemax;
+           }while(acceptance < rndmPtr->flat() && z>zmin);
+           double elossfactor = 1.-z;  
+           pnew.e(std::sqrt(pnew.pAbs2()*elossfactor*elossfactor
+                  +pnew.m2Calc()) ); 
+           pnew.px(elossfactor*pnew.px());
+           pnew.py(elossfactor*pnew.py());
+           pnew.pz(elossfactor*pnew.pz());
+           zmin = .1/pnew.e();
+         }   
+         p.p(pnew.px(), pnew.py(), pnew.pz(), pnew.e());
+        }
+      }
+      for(auto&p:plist) event.append(p);
     }
 
     // Handle veto after ISR + FSR + MPI, but before beam remnants
@@ -3187,6 +3247,7 @@ bool PartonLevel::wzDecayShowers( Event& event) {
   return true;
 
 }
+
 
 //==========================================================================
 

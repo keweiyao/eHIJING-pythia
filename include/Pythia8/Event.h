@@ -32,11 +32,8 @@ class Event;
 // This class holds info on a particle in general.
 
 struct MultipleCollisionEntry{
-    Vec4 q;
+    double L;
     double q2;
-    double t0,t1;
-    double TimeFactor;
-    double mu2;
 };
 
 class Particle {
