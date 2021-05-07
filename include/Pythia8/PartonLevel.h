@@ -122,7 +122,8 @@ private:
          // WK: eHIJING
   int    pTmaxMatchMPI;
   double mMinDiff, mWidthDiff, pMaxDiff, vetoWeakDeltaR2,
-         AtomicNumber, qhat0g, Q0, mu2; // WK: AtomicNumber, qhat0g, Q0, mu2
+         AtomicNumber, ChargeNumber, qhat0g, Q0, mu2; // WK: AtomicNumber,
+                           // ChargeNumber, qhat0g, Q0, mu2
 
   // Event generation strategy. Number of steps. Maximum pT scales.
   bool   doVeto;

@@ -2078,7 +2078,8 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
   // For dipole recoil: no emission if the radiator is a quark,
   // since then a unified description is in SpaceShower.
   int    colTypeAbs = abs(dip.colType);
-  if (doDipoleRecoil && dip.isrType != 0 && colTypeAbs == 1) return;
+  // WK cmment this out to turn on medium effects
+  //if (doDipoleRecoil && dip.isrType != 0 && colTypeAbs == 1) return;
   //std::cout << "I am inside QCD: 3" <<std::endl;
   // Upper estimate for matrix element weighting and colour factor.
   // Special cases for triplet recoiling against gluino and octet onia.
@@ -2164,8 +2165,9 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
         emitCoefGlue *= userHooksPtr->enhanceFactor("fsr:Q2QG");
 
       // For dipole recoil: no g -> g g branching, since in SpaceShower.
-      if (doDipoleRecoil && dip.isrType != 0 && colTypeAbs == 2)
-        emitCoefGlue = 0.;
+      // WK: comment this out to turn on medium effects
+      //if (doDipoleRecoil && dip.isrType != 0 && colTypeAbs == 2)
+      //  emitCoefGlue = 0.;
 
       // Find emission coefficient for g -> q qbar.
       emitCoefTot  = emitCoefGlue;
@@ -2209,19 +2211,22 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
       else {
         double acceptance = 1.; 
         do{     
-         double logvac = log(1. / zMinAbs - 1.);
          double argmax = dip.pT2*L/(2*zMinAbs*p.e());
          double argmin = pT2min*L/(2*(1.-zMinAbs)*p.e());
          double phasemax = phase(argmax)-phase(argmin);
-         double coeff_max = emitCoefTot*(1.0 +
-                      2.0*qhat0g*L/pT2min * phasemax / logvac);
+         double coeff_max = overFac * wtPSglue * colFac * (
+                            log(1. / zMinAbs - 1.)
+                         +  2.0*qhat0g*L/pT2min * phasemax
+                          );
          dip.pT2 = Lambda2 * pow( dip.pT2 / Lambda2,
                                   pow(rndmPtr->flat(), b0 / coeff_max) );
          double arg2 = dip.pT2*L/(2*zMinAbs*p.e());
          double arg1 = dip.pT2*L/(2*(1.-zMinAbs)*p.e());
          double phase_corr = phase(arg2) - phase(arg1);
-         double coeff_corr =  emitCoefTot*(1.0 +
-                      2.0*qhat0g*L/dip.pT2 * phase_corr / logvac);
+         double coeff_corr = overFac * wtPSglue * colFac * (
+                            log(1. / zMinAbs - 1.)
+                         +  2.0*qhat0g*L/dip.pT2 * phase_corr
+                          );
          acceptance = coeff_corr/coeff_max;
         }while(rndmPtr->flat() > acceptance && dip.pT2 > pT2min);
        }
@@ -3275,11 +3280,9 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
   rad.setRx(event.Rx());
   rad.setRy(event.Ry());
   rad.setRz(event.Rz());
-  event.fill_elastic_collision(rad);
   emt.setRx(event.Rx());
   emt.setRy(event.Ry());
   emt.setRz(event.Rz());
-  event.fill_elastic_collision(emt);
   // WK <<<
 
   // Recoiler either in final or in initial state
@@ -3396,6 +3399,7 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
   // WK: here particles are appened into the particle lists of Pythia
   int iRad = event.append(rad);
   int iEmt = event.append(emt);
+
 
   // Allow setting of new parton production vertex.
   if (doPartonVertex) partonVertexPtr->vertexFSR( iEmt, event);

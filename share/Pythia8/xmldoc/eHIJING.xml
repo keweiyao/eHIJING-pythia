@@ -8,10 +8,13 @@
 <parm name="eHIJING:AtomicNumber" default="208" min="1" max="208"> 
 </parm> 
 
+<parm name="eHIJING:ChargeNumber" default="82" min="0" max="82"> 
+</parm> 
+
 <parm name="eHIJING:qhat0g" default="0.1" min="0.001" max="1.0"> 
 </parm> 
 
-<parm name="eHIJING:mu2" default="0.04" min="0.001" max="0.16"> 
+<parm name="eHIJING:mu2" default="0.16" min="0.01" max="1.0"> 
 </parm> 
  
 </chapter> 
