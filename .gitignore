@@ -1,2 +1,4 @@
 eHIJING-examples/build
 tmp/
+cpp_interface/results*/
+cpp_interface/Tables/

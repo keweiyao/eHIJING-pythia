@@ -4,6 +4,7 @@
 #include <cmath>
 #include <random>
 #include <iostream>
+#include <filesystem>
 
 class table_nd{
 private:
@@ -46,7 +47,8 @@ public:
     int size() const {return total_size_;};
     std::vector<int> shape() const { return shape_; }   
     std::vector<double> step() const{ return step_; }   
-    void set(std::vector<int> index, double value) { data_[ArrayIndex2LinearIndex(index)] = value; }
+    void set_with_index(std::vector<int> index, double value) { data_[ArrayIndex2LinearIndex(index)] = value; }
+    void set_with_linear_index(int k, double value) { data_[k] = value; }
     double get_with_index(std::vector<int> index) { return data_[ArrayIndex2LinearIndex(index)]; }
     double get_with_linear_index(int k) { return data_[k]; }
     double interpolate(std::vector<double> Xinput) {
@@ -92,13 +94,11 @@ private:
     double compute_Qs2(double TA, double Q2xB);
     double compute_GHT_z_kt2(double TA, double Q2xB, double kt2, double Ltauf, double Qs2);
     double compute_GHT_kt2(double TA, double Q2xB, double kt2, double Ltauf, double Qs2);
-
 public:
     eHIJING(int mode, double K);
-    void Tabulate();
-    void LoadTable() {};
+    void Tabulate(std::filesystem::path table_path);
     double sample_L(double A){
-        double RA = (1.12*5.086) * std::pow(A, 1./3.);
+        double RA = (1.12*5.076) * std::pow(A, 1./3.);
         double r = RA * std::pow(flat_gen(gen), 1./3.);
         double costheta = flat_gen(gen)*2.0 - 1.0;
         double rz = r*costheta;
@@ -119,13 +119,15 @@ public:
         double TA = rho0_*L;
         double Q2x = Q2/x;
         double Lkt2_over_2E = L*kt2/2/E;
-        return Qs2(x, Q2, TA)/kt2 * GHT_kt2_Table.interpolate({TA, std::log(Q2x), std::log(kt2), std::log(5+Lkt2_over_2E)});
+        return Qs2Table.interpolate({TA, std::log(Q2x)})/kt2 
+             * GHT_kt2_Table.interpolate({TA, std::log(Q2x), std::log(kt2), std::log(5+Lkt2_over_2E)});
     }
     double induced_dFdkt2dz(double x, double Q2, double L, double E, double kt2, double z){
         double TA = rho0_*L;
         double Q2x = Q2/x;
-        double LoverTauf = L*kt2/(2*z*E);
-        return Qs2(x, Q2, TA)/kt2 * GHT_z_kt2_Table.interpolate({TA, std::log(Q2x), std::log(kt2), std::log(5+LoverTauf)});
+        double LoverTauf = L*kt2/(2*(1.0-z)*z*E);
+        return Qs2Table.interpolate({TA, std::log(Q2x)})/kt2 
+             * GHT_z_kt2_Table.interpolate({TA, std::log(Q2x), std::log(kt2), std::log(5+LoverTauf)});
     }
     bool next_kt2(double & kt2, int pid, double E, double L, 
                        double kt2min, double xB, double Q20);

@@ -23,7 +23,7 @@ int test_table(){
             for (int k=0; k<N; k++){
                 std::vector<int> IX({i,j,k});
                 std::vector<double> X({step*i, step*j, step*k});
-                T1.set(IX, func(X));
+                T1.set_with_linear_index(k, func(X));
             }
         }
     }
@@ -43,13 +43,13 @@ int test_table(){
 
 int test_table_gen(){
     eHIJING gen(0, 1.0);
-    gen.Tabulate();
+    gen.Tabulate("./Tables/");
     std::cout << "qhatF = " << gen.qhatF(0.1, 2.25, gen.rho0()*1.0*5.076) * 5.076 << " [GeV^2/fm]" << std::endl;
     std::cout << "qhatF = " << gen.qhatF(0.1, 2.25, gen.rho0()*3.0*5.076) * 5.076 << " [GeV^2/fm]" << std::endl;
     std::cout << "qhatF = " << gen.qhatF(0.1, 2.25, gen.rho0()*5.0*5.076) * 5.076 << " [GeV^2/fm]" << std::endl;
     std::cout << "qhatF = " << gen.qhatF(0.01, 2.25, gen.rho0()*3.0*5.076) * 5.076 << " [GeV^2/fm]" << std::endl;
     std::ofstream f("test.dat");
-    double kt2=1.0;
+    double kt2 = 1.0;
     double x = 0.1, Q2 = 2.0,  L = 5*5.076;
     for (double z=1e-2; z<1.0; z+=0.005){
         f << z << " " << gen.induced_dFdkt2dz(x, Q2, L, 10.0, kt2, z) << std::endl;
@@ -58,32 +58,36 @@ int test_table_gen(){
 }
 
 int main(int argc, char*argv[]){
+   
     int mode = atoi(argv[1]);
     double K = atof(argv[2]);
     double A = atof(argv[3]);
     eHIJING gen(mode, K);
-    gen.Tabulate();
+    gen.Tabulate("./Tables/");
     std::ofstream f("test.dat");
     double E0 = 10, Q2 = 2.25;
     double x = Q2/2/E0/0.938;
-    double kt2min = 0.16;
+    double kt2min = 0.25;
     int pid = 1;
-    for (int i=0; i<100000; i++){
+    double avg_qhat = 0.;
+    int N = 100000;
+    for (int i=0; i<N; i++){
         double L = gen.sample_L(A);
+        avg_qhat += gen.qhatF(x, Q2, gen.rho0()*std::max(L,5.076));
         double E = E0;
         double kt2 = Q2;
+        double z;
         while(kt2 > kt2min){
             if (!gen.next_kt2(kt2, pid, E, L, kt2min, x, Q2)) continue;
             if (kt2 < kt2min) break;
-            double z;
+  
             if (!gen.sample_z(z, pid, E, L, kt2, x, Q2)) continue;
-            if (z*E < std::sqrt(kt2)) continue;
             f << z*E << " ";
             E = E*(1.-z);
-            if (E<.4) break;
         }
         f << E << std::endl; 
     }
+    std::cout << "Avg. qhatF("<<A<<") = " << K*avg_qhat / N * 5.076 << " [GeV^2/fm]" << std::endl;
     return 0;
 }
 
