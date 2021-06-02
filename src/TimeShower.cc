@@ -3250,7 +3250,7 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
   int isrTypeNow  = dipSel->isrType;
   int isrTypeSave = isrTypeNow;
   if (!useLocalRecoilNow) isrTypeNow = 0;
-  //if (isrTypeNow != 0) pRec = 2. * recBef.p() - pRec; // WK: check this
+  if (isrTypeNow != 0 && (!eHIJING)) pRec = 2. * recBef.p() - pRec; // WK: check this
 
   // New: Return if the x-value for the incoming recoiler is nonsense.
   if ( isrTypeNow != 0 && 2.*pRec.e()/event[0].m() > 1. ) {
@@ -3273,8 +3273,6 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
   
 
   // WK >>> set the production vertex for the newly generated partons
-  // manuall handle momentum conservation!
-  // 
   rad.setRx(event.Rx());
   rad.setRy(event.Ry());
   rad.setRz(event.Rz());
@@ -3289,14 +3287,6 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
       recBef.col(), recBef.acol(), pRec, dipSel->mRec, pTsel)
     : Particle(recBef.id(), -53, 0, 0, iRecBef, iRecBef,
       recBef.col(), recBef.acol(), pRec, 0., 0.);
-
-  //std::cout << rad.id() << " " << emt.id() << " rec = " << rec.p();
-  //std::cout << rad.id() << " " << emt.id() << " rad+emt+rec = " << rad.p() + emt.p() + rec.p();
-  //std::cout << event[iRadBef].id() << " " <<event[iRecBef].id() <<" rad0+rec0 = " << event[iRadBef].p()+event[iRecBef].p()  << std::endl;
-  //std::cout << rad.id() << " " << emt.id() << " rad+emt = " << rad.p() + emt.p();
-  //std::cout << event[iRadBef].id() <<" mother = " << event[iRadBef].p()  << std::endl;
-  
-
 
   // Special checks to set weak particles status equal to 56.
   // This is needed for decaying the particles. Also set polarisation.
