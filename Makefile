@@ -31,7 +31,10 @@ LOCAL_SHARE=share/Pythia8
 LOCAL_SRC=src
 LOCAL_TMP=tmp
 LOCAL_MKDIRS:=$(shell mkdir -p $(LOCAL_TMP) $(LOCAL_LIB))
-CXX_COMMON:=-I$(LOCAL_INCLUDE) $(CXX_COMMON)
+CXX_COMMON:=--std=c++17 -I$(LOCAL_INCLUDE) $(CXX_COMMON) \
+-I/home/weiyao/miniconda3/include\
+-L/home/weiyao/miniconda3/lib -lgsl -lgslcblas -lm
+
 
 # PYTHIA.
 OBJECTS=$(patsubst $(LOCAL_SRC)/%.cc,$(LOCAL_TMP)/%.o,\

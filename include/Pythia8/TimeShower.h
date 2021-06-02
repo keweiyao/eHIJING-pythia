@@ -23,6 +23,8 @@
 #include "Pythia8/UserHooks.h"
 #include "Pythia8/MergingHooks.h"
 #include "Pythia8/WeakShowerMEs.h"
+#include <string>
+#include "eHIJING/eHIJING.h"
 
 namespace Pythia8 {
 
@@ -268,7 +270,7 @@ private:
          noProcVariations, eHIJING; // WK: eHIJING
   int    pTmaxMatch, pTdampMatch, alphaSorder, alphaSnfmax, nGluonToQuark,
          weightGluonToQuark, alphaEMorder, nGammaToQuark, nGammaToLepton,
-         nCHV, idHV, alphaHVorder, nMaxGlobalRecoil, weakMode;
+         nCHV, idHV, alphaHVorder, nMaxGlobalRecoil, weakMode, eHIJING_mode; // WK: eHIJING_mode
   double pTdampFudge, mc, mb, m2c, m2b, renormMultFac, factorMultFac,
          fixedFacScale2, alphaSvalue, alphaS2pi, Lambda3flav, Lambda4flav,
          Lambda5flav, Lambda3flav2, Lambda4flav2, Lambda5flav2,
@@ -278,7 +280,9 @@ private:
          octetOniumColFac, mZ, gammaZ, thetaWRat, mW, gammaW, CFHV, nFlavHV,
          alphaHVfix, LambdaHV, pThvCut, pT2hvCut, mHV, pTmaxFudgeMPI,
          weakEnhancement, vetoWeakDeltaR2, dASmax, cNSpTmin, uVarpTmin2,
-         overFactor, AtomicNumber, qhat0g; // WK: AtomicNumber, qhat0
+         overFactor, AtomicNumber, eHIJING_Kfactor; // WK: AtomicNumber, eHIJING_Kfactor
+  std::string eHIJING_table; // WK: eHIJING_table
+  EHIJING::eHIJING * eHIJING_Gen;
 
   // alphaStrong and alphaEM calculations.
   AlphaStrong alphaS;

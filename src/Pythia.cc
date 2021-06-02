@@ -1853,7 +1853,8 @@ bool Pythia::next() {
       beamVMDA.clear();
       beamVMDB.clear();
       partonSystems.clear();
-
+    
+      // WK: this is where parton level is called in main Pythia8 program
       // Parton-level evolution: ISR, FSR, MPI.
       if ( !partonLevel.next( process, event) ) {
 
@@ -1918,6 +1919,7 @@ bool Pythia::next() {
         return true;
       }
 
+      // WK: this is where hadron level is called in main Pythia8 program
       // Hadron-level: hadronization, decays.
       info.addCounter(16);
       if ( !hadronLevel.next( event) ) {

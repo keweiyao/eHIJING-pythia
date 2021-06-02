@@ -10,25 +10,6 @@
 
 namespace Pythia8 {
 
-double phase2(double x){
-   if (x<3.2){
-       return x/6. - pow3(x)/360.;
-   }else{
-       return M_PI/4. - 1./x + std::cos(x)/pow3(x);
-   }
-}
-
-
-double phase_kT2_order(double x){
-   if (x<4.05){
-       double x2 = std::pow(x,2);
-       double x4 = std::pow(x,4);
-       return x2/12. - x4/480. + x4*x2/30240.;
-   }else{
-       return std::log(x) - 0.42278433509846713
-             + 2.*std::sin(x)/std::pow(x,3);
-   }
-}
 
 //==========================================================================
 
@@ -94,12 +75,19 @@ bool PartonLevel::init( Info* infoPtrIn, Settings& settings,
   doHardDiff         = settings.flag("Diffraction:doHard");
   sampleTypeDiff     = (doHardDiff) ? settings.mode("Diffraction:sampleType")
                      : 0;
-  eHIJING            = settings.flag("eHIJING:all"); // WK: eHIJING
-  qhat0g             = settings.parm("eHIJING:qhat0g");
+  // WK: eHIJING flag and qhat0g
+  eHIJING            = settings.flag("eHIJING:all");
+  eHIJING_Kfactor    = settings.parm("eHIJING:Kfactor");
+  eHIJING_mode       = settings.parm("eHIJING:Mode");
+  eHIJING_table      = "./Tables";
+
   AtomicNumber       = settings.parm("eHIJING:AtomicNumber");
-  ChargeNumber       = settings.parm("eHIJING:ChargeNumber");
-  mu2                = settings.parm("eHIJING:mu2");
-  Q0                 = settings.parm("TimeShower:pTmin");
+  std::cout << "init EHIJING 2<<"<<std::endl;
+  if (eHIJING){
+    eHIJING_Gen = new EHIJING::eHIJING(eHIJING_mode, eHIJING_Kfactor);
+    eHIJING_Gen->Tabulate(eHIJING_table);
+  }
+  std::cout << "Done 2<<"<<std::endl;
 
   // Separate low-mass (unresolved) and high-mass (perturbative) diffraction.
   mMinDiff           = settings.parm("Diffraction:mMinPert");
@@ -1001,572 +989,55 @@ bool PartonLevel::next( Event& process, Event& event) {
 
 
     // WK >>>
-    // After parton shower, do energy loss to mimic in-medium fragmenation
-    // below Q0 scale
-    double Q20 = Q0*Q0;
-    double a0 = 4.*M_PI/9./std::log(Q20/0.04);
-    /*if (eHIJING && mu2<Q0*Q0){
-      std::vector<Particle> plist;
-      for (int ip=0; ip<event.size(); ip++){
-        auto & p = event[ip];
-        if (p.isFinal() && p.isParton()){
-          
-          double CR = p.idAbs()==21 ? 3./2. : 4./3.;
-          double vx = p.px()/p.pAbs(),
-                 vy = p.py()/p.pAbs(),
-                 vz = p.pz()/p.pAbs();
-          double xdotv = event.Rx()*vx + event.Ry()*vy + event.Rz()*vz;
-          double R2 = pow2(1.12*pow(AtomicNumber,1./3.)*5.076), 
-                 x2 = pow2(event.Rx())+pow2(event.Ry())+pow2(event.Rz());
-          double L = -xdotv + std::sqrt((R2-x2)+xdotv*xdotv);
-  
-          double pb = std::sqrt(.5*L*qhat0g * (p.id()==21 ? 1. : 4./9.));
-          double r1 = rndmPtr->flat(), r2 = rndmPtr->flat();
-          double rpx = std::sqrt(-2.*std::log(r1)) * std::cos(2*M_PI*r2);
-          double rpy = std::sqrt(-2.*std::log(r1)) * std::sin(2*M_PI*r2);
-         
-          double zmin = .5/p.e();
-          double zmax = 1.-zmin;
-          double z = zmin;
-          double ztot = 0.;
-          Vec4 pnew = p.p();
-          while(z<zmax && zmin < zmax && ztot<1.){
-            double acceptance;
-            do{
-              double phasemax = phase2(Q0*Q0*L/2./zmin/p.e())
-                              - phase2(mu2*L/2./zmax/p.e());
-              double invpowers = a0*CR/M_PI*qhat0g*L*L/p.e()*phasemax;
-              z = 1./(1./z+std::log(rndmPtr->flat())/invpowers);
-              double kt2max = std::max(std::min(Q0*Q0,z*z*p.e()*p.e()),mu2);
-              double phase_corr = phase2(kt2max*L/2./z/p.e())
-                                - phase2(mu2*L/2./z/p.e());
-              acceptance = phase_corr/phasemax * (1.+pow2(1.-z))/2.;
-         
-            }while(acceptance < rndmPtr->flat() && z<zmax && z>zmin);
-            ztot += z;
-            if (z<zmin || z>zmax || ztot>=1.) break; 
-            auto pg = p.p()*z;
-            pnew = pnew - pg;
-            pnew.e(std::sqrt(p.m2Calc() + pnew.pAbs2()));
-            if (pg.e()<2.0) continue;
-            // exchange color:
-            if (p.id()==1 || p.id()==2 || p.id()==3 || p.id()==4 || p.id()==5){
-                // For quark:
-                // gluon inherent the color of the hard quark
-                // recoil medium quark attachs to the anti color of the gluon
-                // original quark gets assigned a new color,
-                // which will be filled by a diquark in the final step
-                int c1 = p.col();
-                int c2 = event.nextColTag();
-                int c3 = event.nextColTag();
-                p.col(c2);
-                // new recoil quark, transverse to the incoming hard parton
-                int idq = 1;
-                double mq = particleDataPtr->m0(idq);
-                Vec4 pqperp(0.2, 0., 0., std::sqrt(.2*.2+mq*mq));
-                pqperp.rot(0,2*M_PI*rndmPtr->flat());
-                pqperp.rot(p.theta(), 0.);
-                pqperp.rot(0., p.phi()); 
-                Particle recoil = Particle(idq, 501, ip, 0, 0, 0,
-                                           c3, 0, pqperp, mq, Q0);
-                // std::cout << recoil.p() ;
-                plist.push_back(recoil);
-           
-                // new radiated gluon induced by the medium
-                pg = pg-pqperp;
-                pg.e(pg.pAbs());
-                Particle rad = Particle(21, 501, ip, 0, 0, 0,
-                                           c1, c3, pg, 0., Q0);
-                plist.push_back(rad);
+    // collision broadening
+    if (false) {
 
-                // diquark
-                Vec4 pd(0.,0.,0., 0.66);
-                Particle diquark = Particle(2201, 501, ip, 0, 0, 0,
-                                           0, c2, pd, 0.6, Q0);
-                plist.push_back(diquark);
+    // WK >>>
+      Vec4 pProton = event[1].p(); // four-momentum of proton
+      Vec4 peIn    = event[4].p(); // incoming electron
+      int hardid = event[5].id();
+      Vec4 peOut   = event[6].p(); // outgoing electron
+      Vec4 pGamma = peIn - peOut; // virtual boson photon/Z^0/W^+-
+
+      // Q2, W2, Bjorken x, y.
+      double Q2 = - pGamma.m2Calc(); // hard scale square
+      double Q  = std::sqrt(Q2);
+      double W2 = (pProton + pGamma).m2Calc(); // center-of-mass energy 
+                                                  // of gamma-p collision
+      double gammaContraction = std::sqrt(W2)/2./0.938; 
+      double xB  = Q2 / (2. * pProton * pGamma); // Bjorken x
+
+        for (int i=0; i<event.size(); i++) {
+            auto & p = event[i];
+            if (p.isParton() && p.isFinal() && p.id()==hardid){
+
+    double vx = p.px()/p.pAbs(),
+           vy = p.py()/p.pAbs(),
+           vz = p.pz()/p.pAbs();
+    double xdotv = event.Rx()*vx + event.Ry()*vy + event.Rz()*vz;
+    double R2 = pow2(1.12*pow(AtomicNumber, 1./3.)*5.076), 
+           x2 = pow2(event.Rx())+pow2(event.Ry())+pow2(event.Rz());
+    double L = -xdotv + std::sqrt((R2-x2)+xdotv*xdotv);
+    // WK <<<
+
+
+                std::vector<double> qt2s, ts;
+                eHIJING_Gen->sample_all_qt2(p.id(), p.e(), L, xB, Q2, qt2s, ts);
+                double Qx=0., Qy=0., Qz=0.;
+                for (auto & q2 : qt2s){
+                    double phi = 2*M_PI*rndmPtr->flat(), qT = std::sqrt(q2);
+                    Qx += qT*std::cos(phi);
+                    Qy += qT*std::sin(phi);
+                    Qz += q2/Q2*xB*std::sqrt(W2);
+                }
+                Vec4 qmu{Qx,Qy,Qz,0};
+                qmu.rot(p.theta(), 0.);
+                qmu.rot(0., p.phi());
+                p.p(p.p()+qmu);
+                p.e(std::sqrt(p.pAbs2()+p.m2()));
             }
-          }
-          p.p(pnew);
         }
-      }
-      for (auto & p : plist) event.append(p);
-    }*/
-
-    // kT ordered
-    /*if (eHIJING && mu2<Q0*Q0){
-      std::vector<Particle> plist;
-      for (int ip=0; ip<event.size(); ip++){
-        auto & p = event[ip];
-        bool interested = p.isFinal() && p.isParton();
-        if (!interested) continue;
-        
-        double CR = p.idAbs()==21 ? 3./2. : 4./3.;
-        double vx = p.px()/p.pAbs(),
-               vy = p.py()/p.pAbs(),
-               vz = p.pz()/p.pAbs();
-        double xdotv = event.Rx()*vx + event.Ry()*vy + event.Rz()*vz;
-        double R2 = pow2(1.12*pow(AtomicNumber,1./3.)*5.076), 
-               x2 = pow2(event.Rx())+pow2(event.Ry())+pow2(event.Rz());
-        double L = -xdotv + std::sqrt((R2-x2)+xdotv*xdotv);
-  
-        double pb = std::sqrt(.5*L*qhat0g * (p.id()==21 ? 1. : 4./9.));
-        double r1 = rndmPtr->flat(), r2 = rndmPtr->flat();
-        double rpx = std::sqrt(-2.*std::log(r1)) * std::cos(2*M_PI*r2);
-        double rpy = std::sqrt(-2.*std::log(r1)) * std::sin(2*M_PI*r2);
-          
-        double zmin = Q0/p.e();
-        double zmax = 1.-zmin;
-        double kt2 = Q20;
-        Vec4 pnew = p.p();
-        while(mu2<kt2 && zmin < zmax){
-          double acceptance;
-          // sample kt2
-          do{
-            double argmax = kt2*L/(2*zmin*pnew.e());
-            double argmin = mu2*L/(2*zmax*pnew.e());
-            double phase_max = phase_kT2_order(argmax)
-                             - phase_kT2_order(argmin);
-            double coeff_max = a0*CR/M_PI * 2.0*qhat0g*L * phase_max;
-            kt2 = kt2/(1.+kt2/coeff_max * std::log(1./rndmPtr->flat()) );
-            double arg2 = kt2*L/(2*zmin*pnew.e());
-            double arg1 = kt2*L/(2*zmax*pnew.e());
-            double phase_corr = phase_kT2_order(arg2) 
-                              - phase_kT2_order(arg1);
-            acceptance = phase_corr/phase_max;
-          }while(acceptance<rndmPtr->flat() && mu2<kt2);
-          // sample z
-          double z0 = kt2*L/2./pnew.e();
-          double xmin = zmin/z0;
-          double xmax = zmax/z0;
-          double Pxnorm1 = 1.5 * std::log(1./3./xmin);
-          double Pxnorm2 = (3.-1./3./xmax/xmax);
-          double PxnormTot = Pxnorm1 + Pxnorm2;
-          double Pc =  Pxnorm1/PxnormTot;
-          double x;
-          do{
-            // sample x = z/z0 ~ 1/x*(1-x*sin(1/x))
-            double r = rndmPtr->flat();
-            if (r<Pc) { 
-              x = xmin*std::exp(r*PxnormTot/1.5);
-              acceptance = ( 1.-x*sin(1./x) ) / 1.5;
-            }
-            else { 
-              x = 1./std::sqrt(9. - 3.*(r*PxnormTot - Pxnorm1));
-              acceptance = ( 1.-x*sin(1./x) ) * 6. * pow2(x);
-            }
-          }while(acceptance<rndmPtr->flat() && xmin<x && x<xmax);
-          double z = x*z0;
-          if (kt2<mu2) break; 
-          //std::cout << z << " ";
-          auto pg = pnew*z;
-          pnew = pnew - pg; // energy loss
-          pnew.e(std::sqrt(p.m2Calc() + pnew.pAbs2()));
-          zmin = Q0/pnew.e();
-          zmax = 1.-zmin;
-          if (pg.e()<1.0) continue;
-          // exchange color:
-          if (p.id()==1 || p.id()==2 || p.id()==3 || p.id()==4 || p.id()==5){
-            // For quark:
-            // gluon inherent the color of the hard quark
-            // recoil medium quark attachs to the anti color of the gluon
-            // original quark gets assigned a new color,
-            // which will be filled by a diquark in the final step
-            int c1 = p.col();
-            int c2 = event.nextColTag();
-            int c3 = event.nextColTag();
-            p.col(c2);
-            // new recoil quark, transverse to the incoming hard parton
-            int idq = 2;
-            double mq = particleDataPtr->m0(idq);
-            Vec4 pqperp(0.2, 0., 0., std::sqrt(.2*.2+mq*mq));
-            pqperp.rot(0,2*M_PI*rndmPtr->flat());
-            pqperp.rot(p.theta(), 0.);
-            pqperp.rot(0., p.phi()); 
-            Particle recoil = Particle(idq, 501, ip, 0, 0, 0,
-                                           c3, 0, pqperp, mq, Q0);
-            // std::cout << recoil.p() ;
-            plist.push_back(recoil);
-           
-            // new radiated gluon induced by the medium
-            pg = pg-pqperp;
-            pg.e(pg.pAbs());
-            Particle rad = Particle(21, 501, ip, 0, 0, 0,
-                                           c1, c3, pg, 0., Q0);
-            plist.push_back(rad);
-
-            // diquark
-            Vec4 pd(0.,0.,0., 0.66);
-            Particle diquark = Particle(2101, 501, ip, 0, 0, 0,
-                                           0, c2, pd, 0.66, Q0);
-            plist.push_back(diquark);
-          }
-        }
-        p.p(pnew);
-      }
-      for (auto & p : plist) event.append(p);
-    }*/
-
-
-    double ZoverA = ChargeNumber / AtomicNumber;
-    std::vector<Particle> plist;
-    // color changing
-    /*if (eHIJING) {
-      for (int ip=0; ip<event.size(); ip++){
-        auto & p = event[ip];
-        bool interested = p.isFinal() && p.isParton();
-        if (!interested) continue;
-        double CR = p.idAbs()==21 ? 3./2. : 4./3.;
-double vx = p.px()/p.pAbs(),
-               vy = p.py()/p.pAbs(),
-               vz = p.pz()/p.pAbs();
-        double xdotv = event.Rx()*vx + event.Ry()*vy + event.Rz()*vz;
-        double R2 = pow2(1.12*pow(AtomicNumber,1./3.)*5.076), 
-               x2 = pow2(event.Rx())+pow2(event.Ry())+pow2(event.Rz());
-        double L = -xdotv + std::sqrt((R2-x2)+xdotv*xdotv);
-        if (1<=p.idAbs() && p.idAbs()<=5){          
-            // if this is a quark, change its color with a quark plus diquark
-            int idq, iddiq;
-            if (rndmPtr->flat()<ZoverA) { 
-               // scattering off a proton:
-               // break uud (2212) into a quark plus a diquark
-               if (rndmPtr->flat()<2./3.) {
-                  // hit a u quark
-                  idq = 2; 
-                  if(rndmPtr->flat()<.25) iddiq = 2101;
-                  else iddiq = 2103;
-               }
-               else {
-                  // hit a d quark
-                  idq = 1;
-                  iddiq = 2203;
-               }
-            }
-            else {
-               // scattering off a neutron:
-               // break udd (2112) into a quark plus a diquark
-               if (rndmPtr->flat()<1./3.) {
-                  // hit a u quark
-                  idq = 2; 
-                  iddiq = 1103;
-               }
-               else {
-                  // hit a d quark
-                  idq = 1;
-                  if(rndmPtr->flat()<.25) iddiq = 2101;
-                  else iddiq = 2103;
-               }
-            }
-
-            int hard_c = p.col(), hard_ac = p.acol();
-            int c2 = event.nextColTag();
-            
-            int new_hard_col, new_hard_acol,
-                recoil_col, recoil_acol,
-                diquark_col, diquark_acol;
-            if (p.id()<0) {
-                new_hard_col = 0; new_hard_acol = c2;     
-                recoil_col = c2; recoil_acol = 0;
-                diquark_col = 0;  diquark_acol = hard_c;        
-            }
-            else {
-                new_hard_col = c2; new_hard_acol = 0;     
-                recoil_col = 0; recoil_acol = c2;
-                diquark_col = hard_c;  diquark_acol = 0;    
-            }
-            p.col(new_hard_col); 
-            p.acol(new_hard_acol);
-
-            double mq = particleDataPtr->m0(idq);
-
-
-        double pb = std::sqrt(.5*L*qhat0g * (p.id()==21 ? 1. : 4./9.));
-        double r1 = rndmPtr->flat(), r2 = rndmPtr->flat();
-        double rpx = std::sqrt(-2.*std::log(r1)) * std::cos(2*M_PI*r2);
-        double rpy = std::sqrt(-2.*std::log(r1)) * std::sin(2*M_PI*r2);
-
-            // recoiled quark
-            Vec4 pqperp(rpx, rpy, 0., std::sqrt(rpx*rpx+rpy*rpy+mq*mq));
-            pqperp.rot(0,2*M_PI*rndmPtr->flat());
-            pqperp.rot(p.theta(), 0.);
-            pqperp.rot(0., p.phi()); 
-            Particle recoil = Particle(idq, 501, ip, 0, 0, 0,
-                                       recoil_col, recoil_acol,
-                                       pqperp, mq, Q0);
-            // diquark
-            Vec4 pd(0.,0.,0., 0.66);
-            pd = pd-pqperp;
-            pd.e(std::sqrt(pd.pAbs2()+.66*.66));
-            Particle diquark = Particle(iddiq, 501, ip, 0, 0, 0,
-                                        diquark_col, diquark_acol, 
-                                        pd, 0.66, Q0);
-            // add these new particle;
-            plist.push_back(recoil);
-            plist.push_back(diquark);
-          }
-
-          if (p.idAbs()==21){          
-            // if this is a quark, change its color with a quark plus diquark
-            int idq, iddiq;
-            if (rndmPtr->flat()<ZoverA) { 
-               // scattering off a proton:
-               // break uud (2212) into a quark plus a diquark
-               if (rndmPtr->flat()<2./3.) {
-                  // hit a u quark
-                  idq = 2; 
-                  if(rndmPtr->flat()<.25) iddiq = 2101;
-                  else iddiq = 2103;
-               }
-               else {
-                  // hit a d quark
-                  idq = 1;
-                  iddiq = 2203;
-               }
-            }
-            else {
-               // scattering off a neutron:
-               // break udd (2112) into a quark plus a diquark
-               if (rndmPtr->flat()<1./3.) {
-                  // hit a u quark
-                  idq = 2; 
-                  iddiq = 1103;
-               }
-               else {
-                  // hit a d quark
-                  idq = 1;
-                  if(rndmPtr->flat()<.25) iddiq = 2101;
-                  else iddiq = 2103;
-               }
-            }
-
-            int hard_c = p.col(), hard_ac = p.acol();
-            int c2 = event.nextColTag();
-            
-            int new_hard_col, new_hard_acol,
-                recoil_col, recoil_acol,
-                diquark_col, diquark_acol;
-            if (rndmPtr->flat()>0.5) {
-                new_hard_col = hard_c; new_hard_acol = c2;     
-                recoil_col = c2; recoil_acol = 0;
-                diquark_col = 0;  diquark_acol = hard_c;        
-            }
-            else {
-                new_hard_col = c2; new_hard_acol = hard_ac;     
-                recoil_col = 0; recoil_acol = c2;
-                diquark_col = hard_c;  diquark_acol = 0;    
-            }
-            p.col(new_hard_col); 
-            p.acol(new_hard_acol);
-
-            double mq = particleDataPtr->m0(idq);
-
-
-        double pb = std::sqrt(.5*L*qhat0g * (p.id()==21 ? 1. : 4./9.));
-        double r1 = rndmPtr->flat(), r2 = rndmPtr->flat();
-        double rpx = std::sqrt(-2.*std::log(r1)) * std::cos(2*M_PI*r2);
-        double rpy = std::sqrt(-2.*std::log(r1)) * std::sin(2*M_PI*r2);
-
-            // recoiled quark
-            Vec4 pqperp(rpx, rpy, 0., std::sqrt(rpx*rpx+rpy*rpy+mq*mq));
-            pqperp.rot(0,2*M_PI*rndmPtr->flat());
-            pqperp.rot(p.theta(), 0.);
-            pqperp.rot(0., p.phi()); 
-            Particle recoil = Particle(idq, 501, ip, 0, 0, 0,
-                                       recoil_col, recoil_acol,
-                                       pqperp, mq, Q0);
-            // diquark
-            Vec4 pd(0.,0.,0., 0.66);
-            pd = pd-pqperp;
-            pd.e(std::sqrt(pd.pAbs2()+.66*.66));
-            Particle diquark = Particle(iddiq, 501, ip, 0, 0, 0,
-                                        diquark_col, diquark_acol, 
-                                        pd, 0.66, Q0);
-            // add these new particle;
-            plist.push_back(recoil);
-            plist.push_back(diquark);
-          }
-      }
-    }*/
-
-    if (eHIJING && mu2<Q0*Q0){
-      
-      for (int ip=0; ip<event.size(); ip++){
-        auto & p = event[ip];
-        bool interested = p.isFinal() && p.isParton();
-        if (!interested) continue;
-        
-        double CR = p.idAbs()==21 ? 3./2. : 4./3.;
-        double vx = p.px()/p.pAbs(),
-               vy = p.py()/p.pAbs(),
-               vz = p.pz()/p.pAbs();
-        double xdotv = event.Rx()*vx + event.Ry()*vy + event.Rz()*vz;
-        double R2 = pow2(1.12*pow(AtomicNumber,1./3.)*5.076), 
-               x2 = pow2(event.Rx())+pow2(event.Ry())+pow2(event.Rz());
-        double L = -xdotv + std::sqrt((R2-x2)+xdotv*xdotv);
-  
-        double pb = std::sqrt(.5*L*qhat0g * (p.id()==21 ? 1. : 4./9.));
-        double r1 = rndmPtr->flat(), r2 = rndmPtr->flat();
-        double rpx = std::sqrt(-2.*std::log(r1)) * std::cos(2*M_PI*r2);
-        double rpy = std::sqrt(-2.*std::log(r1)) * std::sin(2*M_PI*r2);
-          
-        double zmin = Q0/p.e();
-        double zmax = 1.-zmin;
-        double kt2 = Q20;
-        Vec4 pnew = p.p();
-        while(mu2<kt2 && zmin < zmax){
-          double acceptance;
-          // sample kt2
-          do{
-            double argmax = kt2*L/(2.*zmin*pnew.e());
-            double argmin = mu2*L/(2.*zmax*pnew.e());
-            double phase_max = phase_kT2_order(argmax)
-                             - phase_kT2_order(argmin);
-            double coeff_max = a0*CR/M_PI * 2.0*qhat0g*L * phase_max;
-            kt2 = kt2/(1.+kt2/coeff_max * std::log(1./rndmPtr->flat()) );
-            double arg2 = kt2*L/(2*zmin*pnew.e());
-            double arg1 = kt2*L/(2*zmax*pnew.e());
-            double phase_corr = phase_kT2_order(arg2) 
-                              - phase_kT2_order(arg1);
-            acceptance = phase_corr/phase_max;
-          }while(acceptance<rndmPtr->flat() && mu2<kt2);
-          // sample z
-          double z0 = kt2*L/2./pnew.e();
-          double xmin = zmin/z0;
-          double xmax = zmax/z0;
-          double Pxnorm1 = 1.5 * std::log(1./3./xmin);
-          double Pxnorm2 = (3.-1./3./xmax/xmax);
-          double PxnormTot = Pxnorm1 + Pxnorm2;
-          double Pc =  Pxnorm1/PxnormTot;
-          double x;
-          do{
-            // sample x = z/z0 ~ 1/x*(1-x*sin(1/x))
-            double r = rndmPtr->flat();
-            if (r<Pc) { 
-              x = xmin*std::exp(r*PxnormTot/1.5);
-              acceptance = ( 1.-x*sin(1./x) ) / 1.5;
-            }
-            else { 
-              x = 1./std::sqrt(9. - 3.*(r*PxnormTot - Pxnorm1));
-              acceptance = ( 1.-x*sin(1./x) ) * 6. * pow2(x);
-            }
-          }while(acceptance<rndmPtr->flat() && xmin<x && x<xmax);
-          double z = x*z0;
-          auto pg = pnew*z;
-          acceptance = (p.id()==21) ? (1.+pow3(1.-z))/2. 
-                                    : (1.+pow2(1.-z))/2.;
-          if (acceptance < rndmPtr->flat() || pg.e()<std::sqrt(kt2)) continue;
-          if (kt2<mu2) break; 
-
-          pnew = pnew - pg; // energy loss
-          pnew.e(std::sqrt(p.m2Calc() + pnew.pAbs2()));
-          zmin = Q0/pnew.e();
-          zmax = 1.-zmin;
-          if (pg.e()<1.0) continue;
-          // Determine the scattering center:
-          bool scatter_on_proton;
-          if (rndmPtr->flat()<ZoverA) scatter_on_proton = true;
-          else scatter_on_proton = false;
-          // Decompose the nucleon into the color current that 
-          // will be scattered and the remenant, this decomposition 
-          // should depend on xG.
-          // For now, we will assume they are primary low xG gluon
-          // so that: N -> (qq)_J + q + g(xG->0), and the gluon
-          // exchange color:
-          // --> For quark / antiquark and gluons:
-          if ((1<=p.idAbs() && p.idAbs()<=5) || (p.id()==21)){          
-            // gluon inherent the color of the hard quark
-            // recoil medium quark attachs to the anti color of the gluon
-            // original quark gets assigned a new color,
-            // which will be filled by a diquark in the final step
-            // new recoil quark, transverse to the incoming hard parton
-            int idq, iddiq;
-            if (rndmPtr->flat()<ZoverA) { 
-               // scattering off a proton:
-               // break uud (2212) into a quark plus a diquark
-               if (rndmPtr->flat()<2./3.) {
-                  // hit a u quark
-                  idq = 2; 
-                  if(rndmPtr->flat()<.25) iddiq = 2101;
-                  else iddiq = 2103;
-               }
-               else {
-                  // hit a d quark
-                  idq = 1;
-                  iddiq = 2203;
-               }
-            }
-            else {
-               // scattering off a neutron:
-               // break udd (2112) into a quark plus a diquark
-               if (rndmPtr->flat()<1./3.) {
-                  // hit a u quark
-                  idq = 2; 
-                  iddiq = 1103;
-               }
-               else {
-                  // hit a d quark
-                  idq = 1;
-                  if(rndmPtr->flat()<.25) iddiq = 2101;
-                  else iddiq = 2103;
-               }
-            }
-
-            int hard_c = p.col(), hard_ac = p.acol();
-            int c2 = event.nextColTag();
-            int c3 = event.nextColTag();
-            
-            int new_hard_col, new_hard_acol,
-                gluon_col, gluon_acol, 
-                recoil_col, recoil_acol,
-                diquark_col, diquark_acol;
-            bool switchid = (p.id()==21)? (rndmPtr->flat()>0.5) : (p.id()<0);
-            if (switchid) {
-                new_hard_col = hard_c; new_hard_acol = c2;     
-                gluon_col = c2; gluon_acol = c3;
-                recoil_col = c3; recoil_acol = 0;
-                diquark_col = 0;  diquark_acol = hard_c;        
-            }
-            else {
-                new_hard_col = c2; new_hard_acol = hard_ac;     
-                gluon_col = hard_c; gluon_acol = c3;
-                recoil_col = c3; recoil_acol = 0;
-                diquark_col = 0;  diquark_acol = c2;    
-            }
-            p.col(new_hard_col); 
-            p.acol(new_hard_acol);
-
-            double mq = particleDataPtr->m0(idq);
-
-            // recoiled quark
-            Vec4 pqperp(rpx, rpy, 0., std::sqrt(rpx*rpx+rpy*rpy+mq*mq));
-            pqperp.rot(0,2*M_PI*rndmPtr->flat());
-            pqperp.rot(p.theta(), 0.);
-            pqperp.rot(0., p.phi()); 
-            Particle recoil = Particle(idq, 501, ip, 0, 0, 0,
-                                       recoil_col, recoil_acol,
-                                       pqperp, mq, Q0);
-            // induced gluon
-            pg = pg-pqperp;
-            pg.e(pg.pAbs());
-            Particle rad = Particle(21, 501, ip, 0, 0, 0,
-                                    gluon_col, gluon_acol, 
-                                    pg, 0., Q0);
-            // diquark
-            Vec4 pd(0.,0.,0., 0.66);
-            pd.e(std::sqrt(pd.pAbs2()+.66*.66));
-            Particle diquark = Particle(iddiq, 501, ip, 0, 0, 0,
-                                        diquark_col, diquark_acol, 
-                                        pd, 0.66, Q0);
-            // add these new particle;
-            plist.push_back(recoil);
-            plist.push_back(rad);
-            plist.push_back(diquark);
-          }
-        }
-        p.p(pnew);
-      }
-      for (auto & p : plist) event.append(p);
     }
-
 
 
 
@@ -2088,10 +1559,12 @@ void PartonLevel::setupHardSys(Event& process, Event& event) {
     if (process[i].mother1() > inM) break;
     // WK >>>
     // beam and hard subprocess partons to the event record.
+
     if (eHIJING && process[i].isParton() && process[i].status()>0
         ) {
       // This should be mostly u quark and sometimes d quark
       // status should be 23 and event-id is 5
+        
       process[i].setRx(event.Rx());
       process[i].setRy(event.Ry());
       process[i].setRz(event.Rz());
@@ -2122,7 +1595,6 @@ void PartonLevel::setupHardSys(Event& process, Event& event) {
     // Complete task of copying hard subsystem into event record.
     ++nHardDone;
   }
-
   // Store participating partons as first set in list of all systems.
   partonSystemsPtr->addSys();
   partonSystemsPtr->setInA(0, inP + nOffset);

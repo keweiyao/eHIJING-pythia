@@ -7,16 +7,6 @@
 
 #include "Pythia8/TimeShower.h"
 
-double phase(double x){
-   if (x<4.05){
-       double x2 = std::pow(x,2);
-       double x4 = std::pow(x,4);
-       return x2/12. - x4/480. + x4*x2/30240.;
-   }else{
-       return std::log(x) - 0.42278433509846713
-             + 2.*std::sin(x)/std::pow(x,3);
-   }
-}
 
 namespace Pythia8 {
 
@@ -108,9 +98,17 @@ void TimeShower::init( BeamParticle* beamAPtrIn,
   allowMPIdipole     = settingsPtr->flag("TimeShower:allowMPIdipole");
   // WK: eHIJING flag and qhat0g
   eHIJING            = settingsPtr->flag("eHIJING:all");
-  qhat0g             = settingsPtr->parm("eHIJING:qhat0g") / 5.076; // GeV^3
-  AtomicNumber       = settingsPtr->parm("eHIJING:AtomicNumber");
+  eHIJING_Kfactor    = settingsPtr->parm("eHIJING:Kfactor");
+  eHIJING_mode       = settingsPtr->parm("eHIJING:Mode");
+  eHIJING_table      = "./Tables";
 
+  AtomicNumber       = settingsPtr->parm("eHIJING:AtomicNumber");
+  std::cout << "init EHIJING<<"<<std::endl;
+  if (eHIJING){
+    eHIJING_Gen = new EHIJING::eHIJING(eHIJING_mode, eHIJING_Kfactor);
+    eHIJING_Gen->Tabulate(eHIJING_table);
+  }
+  std::cout << "Done<<"<<std::endl;
   // If SpaceShower does dipole recoil then TimeShower must adjust.
   doDipoleRecoil     = settingsPtr->flag("SpaceShower:dipoleRecoil");
   if (doDipoleRecoil) allowBeamRecoil  = true;
@@ -2184,14 +2182,33 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
     }
 
     // WK >>>
+      Vec4 pProton = event[1].p(); // four-momentum of proton
+      Vec4 peIn    = event[4].p(); // incoming electron
+      Vec4 peOut   = event[6].p(); // outgoing electron
+      Vec4 pGamma = peIn - peOut; // virtual boson photon/Z^0/W^+-
+
+      // Q2, W2, Bjorken x, y.
+      double Q2 = - pGamma.m2Calc(); // hard scale square
+      double Q  = std::sqrt(Q2);
+      double W2 = (pProton + pGamma).m2Calc(); // center-of-mass energy 
+                                                  // of gamma-p collision
+      double gammaContraction = std::sqrt(W2)/2./0.938; 
+      double x  = Q2 / (2. * pProton * pGamma); // Bjorken x
+
+
+
     auto & p = event[dip.iRadiator];
     double vx = p.px()/p.pAbs(),
            vy = p.py()/p.pAbs(),
            vz = p.pz()/p.pAbs();
     double xdotv = event.Rx()*vx + event.Ry()*vy + event.Rz()*vz;
-    double R2 = pow2(1.12*pow(AtomicNumber,1./3.)*5.076), 
+    double R2 = pow2(1.12*pow(AtomicNumber, 1./3.)*5.076), 
            x2 = pow2(event.Rx())+pow2(event.Ry())+pow2(event.Rz());
     double L = -xdotv + std::sqrt((R2-x2)+xdotv*xdotv);
+    // now boost this path length to the CoM Frame
+    double Lperp = L * std::sin( p.theta() );
+    double Lpara = L * std::cos( p.theta() );
+    L = std::sqrt(Lperp*Lperp + std::pow(Lpara/ gammaContraction, 2));
     // WK <<<
 
     // Pick pT2 (in overestimated z range) for fixed alpha_strong.
@@ -2209,26 +2226,7 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
                                  pow(rndmPtr->flat(), b0 / emitCoefTot) );
       }
       else {
-        double acceptance = 1.; 
-        do{     
-         double argmax = dip.pT2*L/(2*zMinAbs*p.e());
-         double argmin = pT2min*L/(2*(1.-zMinAbs)*p.e());
-         double phasemax = phase(argmax)-phase(argmin);
-         double coeff_max = overFac * wtPSglue * colFac * (
-                            log(1. / zMinAbs - 1.)
-                         +  2.0*qhat0g*L/pT2min * phasemax
-                          );
-         dip.pT2 = Lambda2 * pow( dip.pT2 / Lambda2,
-                                  pow(rndmPtr->flat(), b0 / coeff_max) );
-         double arg2 = dip.pT2*L/(2*zMinAbs*p.e());
-         double arg1 = dip.pT2*L/(2*(1.-zMinAbs)*p.e());
-         double phase_corr = phase(arg2) - phase(arg1);
-         double coeff_corr = overFac * wtPSglue * colFac * (
-                            log(1. / zMinAbs - 1.)
-                         +  2.0*qhat0g*L/dip.pT2 * phase_corr
-                          );
-         acceptance = coeff_corr/coeff_max;
-        }while(rndmPtr->flat() > acceptance && dip.pT2 > pT2min);
+        bool status = eHIJING_Gen->next_kt2(dip.pT2, p.idAbs(), p.e(), L, pT2min, x, Q2);
        }
        // WK <<<
     } else {
@@ -2266,13 +2264,7 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
             dip.z = 1. - zMinAbs * pow( 1. / zMinAbs - 1., rndmPtr->flat() );
           } 
           else{
-            double acceptance = 1;
-            do{
-              dip.z = 1. - zMinAbs * pow( 1. / zMinAbs - 1., rndmPtr->flat() );
-              double arg = dip.pT2*L/(2.*(1.-dip.z)*p.e());
-              acceptance = (1 + 2.*qhat0g*L/dip.pT2 * (1.-std::sin(arg)/arg) )
-                         / (1 + 2.*qhat0g*L/dip.pT2 * 1.22 );
-            }while(acceptance < rndmPtr->flat());
+            eHIJING_Gen->sample_z(dip.z, p.idAbs(), p.e(), L, dip.pT2, x, Q2);
           }
         } else {
             dip.z = zMinAbs + (1. - 2. * zMinAbs) * rndmPtr->flat();
@@ -3212,6 +3204,8 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
   double wtPhi = 1.;
   do {
     double phi = 2. * M_PI * rndmPtr->flat();
+    // WK: in pythia momentum conservation is fullfuiled by adjusting the recoiler 
+    // WK: in eHIJING: we switch to ensure momentum conservation in the nuclear frame
 
     // Define kinematics of branching in dipole rest frame.
     pRad = Vec4( pTcorr * cos(phi), pTcorr * sin(phi), pzRad,
@@ -3256,7 +3250,7 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
   int isrTypeNow  = dipSel->isrType;
   int isrTypeSave = isrTypeNow;
   if (!useLocalRecoilNow) isrTypeNow = 0;
-  if (isrTypeNow != 0) pRec = 2. * recBef.p() - pRec;
+  //if (isrTypeNow != 0) pRec = 2. * recBef.p() - pRec; // WK: check this
 
   // New: Return if the x-value for the incoming recoiler is nonsense.
   if ( isrTypeNow != 0 && 2.*pRec.e()/event[0].m() > 1. ) {
@@ -3267,6 +3261,8 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
 
   // PS dec 2010: check if radiator has flexible normalization
   bool isFlexible = dipSel->isFlexible;
+  
+  // WK <<< energy conservation in the nucler frame
 
   // Define new particles from dipole branching.
   double pTsel = sqrt(dipSel->pT2);
@@ -3277,6 +3273,8 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
   
 
   // WK >>> set the production vertex for the newly generated partons
+  // manuall handle momentum conservation!
+  // 
   rad.setRx(event.Rx());
   rad.setRy(event.Ry());
   rad.setRz(event.Rz());
@@ -3291,6 +3289,14 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
       recBef.col(), recBef.acol(), pRec, dipSel->mRec, pTsel)
     : Particle(recBef.id(), -53, 0, 0, iRecBef, iRecBef,
       recBef.col(), recBef.acol(), pRec, 0., 0.);
+
+  //std::cout << rad.id() << " " << emt.id() << " rec = " << rec.p();
+  //std::cout << rad.id() << " " << emt.id() << " rad+emt+rec = " << rad.p() + emt.p() + rec.p();
+  //std::cout << event[iRadBef].id() << " " <<event[iRecBef].id() <<" rad0+rec0 = " << event[iRadBef].p()+event[iRecBef].p()  << std::endl;
+  //std::cout << rad.id() << " " << emt.id() << " rad+emt = " << rad.p() + emt.p();
+  //std::cout << event[iRadBef].id() <<" mother = " << event[iRadBef].p()  << std::endl;
+  
+
 
   // Special checks to set weak particles status equal to 56.
   // This is needed for decaying the particles. Also set polarisation.
@@ -3397,6 +3403,8 @@ bool TimeShower::branch( Event& event, bool isInterleaved) {
 
   // Put new particles into the event record.
   // WK: here particles are appened into the particle lists of Pythia
+  // WK: check momentum conservation
+
   int iRad = event.append(rad);
   int iEmt = event.append(emt);
 

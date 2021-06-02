@@ -32,6 +32,8 @@
 #include "Pythia8/StringLength.h"
 #include "Pythia8/TimeShower.h"
 #include "Pythia8/UserHooks.h"
+#include <string>
+#include "eHIJING/eHIJING.h"
 
 namespace Pythia8 {
 
@@ -120,10 +122,11 @@ private:
          vetoWeakJets, canReconResSys, doReconnect, doHardDiff,
          forceResonanceCR, doNDgamma, doMPIgmgm, showUnresGamma, eHIJING; 
          // WK: eHIJING
-  int    pTmaxMatchMPI;
+  int    pTmaxMatchMPI, eHIJING_mode; // WK: eHIJING_mode
   double mMinDiff, mWidthDiff, pMaxDiff, vetoWeakDeltaR2,
-         AtomicNumber, ChargeNumber, qhat0g, Q0, mu2; // WK: AtomicNumber,
-                           // ChargeNumber, qhat0g, Q0, mu2
+         AtomicNumber, eHIJING_Kfactor; // WK: AtomicNumber, eHIJING_Kfactor
+  std::string eHIJING_table; // WK: eHIJING_table
+  EHIJING::eHIJING * eHIJING_Gen;
 
   // Event generation strategy. Number of steps. Maximum pT scales.
   bool   doVeto;
