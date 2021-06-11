@@ -1,0 +1,21 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t45
+#: name: Table 45
+#: description: PBAR multiplicity ratio (Helium/Deuterium) as a function of Q**2.
+
+#: data_file: Table45.yaml
+#: keyword reactions: E- DEUT --> E PBAR X | E+ DEUT --> E+ PBAR X | E- HE --> E- PBAR X | E+ HE --> E+ PBAR X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- PBAR X
+#: RE(Q=HE),,,E+- HE --> E+- PBAR X
+#Q**2 [GEV**2],Q**2 [GEV**2] LOW,Q**2 [GEV**2] HIGH,"MULT(P=4,Q=HE)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+1.34,1.0,1.5,0.923,0.038,-0.038,0.027,-0.027
+1.9,1.5,2.0,0.899,0.045,-0.045,0.026,-0.026
+2.66,2.0,3.0,0.935,0.042,-0.042,0.027,-0.027
+3.69,3.0,4.0,0.957,0.059,-0.059,0.029,-0.029
+4.75,4.0,5.0,0.97,0.078,-0.078,0.028,-0.028
+5.78,5.0,6.0,1.005,0.113,-0.113,0.029,-0.029
+7.0,6.0,8.0,0.959,0.117,-0.117,0.028,-0.028
+9.72,8.0,25.0,1.073,0.215,-0.215,0.031,-0.031
+

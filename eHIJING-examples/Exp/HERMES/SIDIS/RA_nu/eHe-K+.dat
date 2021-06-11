@@ -1,0 +1,22 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t2
+#: name: Table 2
+#: description: K+ multiplicty ratio (Helium/Deuterium) as a function of NU.
+
+#: data_file: Table2.yaml
+#: keyword reactions: E- DEUT --> E K+ X | E+ DEUT --> E+ K+ X | E- HE --> E- K+ X | E+ HE --> E+ K+ X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Strange production | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- K+ X
+#: RE(Q=HE),,,E+- HE --> E+- K+ X
+#NU [GEV],NU [GEV] LOW,NU [GEV] HIGH,"MULT(P=4,Q=HE)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+5.3,4.0,6.0,0.937,0.048,-0.048,0.027,-0.027
+7.15,6.0,8.0,0.961,0.027,-0.027,0.027,-0.027
+9.09,8.0,10.0,0.956,0.02,-0.02,0.027,-0.027
+11.04,10.0,12.0,0.96,0.018,-0.018,0.027,-0.027
+13.0,12.0,14.0,0.957,0.017,-0.017,0.027,-0.027
+14.98,14.0,16.0,0.973,0.019,-0.019,0.028,-0.028
+16.97,16.0,18.0,0.966,0.021,-0.021,0.028,-0.028
+18.97,18.0,20.0,0.934,0.025,-0.025,0.027,-0.027
+21.53,20.0,23.5,0.968,0.029,-0.029,0.028,-0.028
+

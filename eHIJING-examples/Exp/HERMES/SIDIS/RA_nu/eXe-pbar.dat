@@ -1,0 +1,22 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t66
+#: name: Table 66
+#: description: PBAR multiplicity ratio (Xenon/Deuterium) as a function of NU.
+
+#: data_file: Table66.yaml
+#: keyword reactions: E- DEUT --> E PBAR X | E+ DEUT --> E+ PBAR X | E- XE --> E- PBAR X | E+ XE --> E+ PBAR X | E- NUCLEUS --> E- PBAR X | E+ NUCLEUS --> E+ PBAR X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- PBAR X
+#: RE(Q=XE),,,E+- XE --> E+- PBAR X
+#NU [GEV],NU [GEV] LOW,NU [GEV] HIGH,"MULT(P=4,Q=XE)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+5.15,4.0,6.0,0.358,0.063,-0.063,0.048,-0.048
+7.16,6.0,8.0,0.417,0.041,-0.041,0.054,-0.054
+9.04,8.0,10.0,0.46,0.033,-0.033,0.052,-0.052
+11.06,10.0,12.0,0.449,0.027,-0.027,0.035,-0.035
+13.08,12.0,14.0,0.52,0.028,-0.028,0.032,-0.032
+14.98,14.0,16.0,0.568,0.029,-0.029,0.04,-0.04
+17.0,16.0,18.0,0.593,0.032,-0.032,0.049,-0.049
+18.96,18.0,20.0,0.658,0.039,-0.039,0.02,-0.02
+21.64,20.0,23.5,0.761,0.047,-0.047,0.024,-0.024
+

@@ -1,0 +1,22 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t55
+#: name: Table 55
+#: description: PI- multiplicity ratio (Krypton/Deuterium) as a function of NU.
+
+#: data_file: Table55.yaml
+#: keyword reactions: E- DEUT --> E PI- X | E+ DEUT --> E+ PI- X | E- KR --> E- PI- X | E+ KR --> E+ PI- X | E- NUCLEUS --> E- PI- X | E+ NUCLEUS --> E+ PI- X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- PI- X
+#: RE(Q=KR),,,E+- KR --> E+- PI- X
+#NU [GEV],NU [GEV] LOW,NU [GEV] HIGH,"MULT(P=4,Q=KR)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+5.27,4.0,6.0,0.637,0.012,-0.012,0.024,-0.024
+7.16,6.0,8.0,0.675,0.007,-0.007,0.031,-0.031
+9.09,8.0,10.0,0.695,0.005,-0.005,0.033,-0.033
+11.03,10.0,12.0,0.727,0.005,-0.005,0.034,-0.034
+13.01,12.0,14.0,0.761,0.005,-0.005,0.035,-0.035
+15.0,14.0,16.0,0.783,0.005,-0.005,0.033,-0.033
+16.98,16.0,18.0,0.807,0.006,-0.006,0.029,-0.029
+18.97,18.0,20.0,0.823,0.007,-0.007,0.027,-0.027
+21.55,20.0,23.5,0.864,0.009,-0.009,0.028,-0.028
+

@@ -1,0 +1,21 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t110
+#: name: Table 110
+#: description: PI0 multiplicity ratio (Xenon/Deuterium) as a function of Z.
+#: data_file: Table110.yaml
+#: keyword reactions: E- DEUT --> E PI0 X | E+ DEUT --> E+ PI0 X | E- XE --> E- PI0 X | E+ XE --> E+ PI0 X | E- NUCLEUS --> E- PI0 X | E+ NUCLEUS --> E+ PI0 X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- PI0 X
+#: RE(Q=XE),,,E+- XE --> E+- PI0 X
+#Z,Z LOW,Z HIGH,"MULT(P=3,Q=XE)/MULT(P=3,Q=DEUT)",stat +,stat -,sys +,sys -
+0.17,0.1,0.2,0.761,0.016,-0.016,0.026,-0.026
+0.25,0.2,0.3,0.758,0.009,-0.009,0.025,-0.025
+0.35,0.3,0.4,0.739,0.009,-0.009,0.024,-0.024
+0.45,0.4,0.5,0.713,0.01,-0.01,0.023,-0.023
+0.55,0.5,0.6,0.697,0.012,-0.012,0.022,-0.022
+0.64,0.6,0.7,0.657,0.015,-0.015,0.02,-0.02
+0.74,0.7,0.8,0.656,0.019,-0.019,0.02,-0.02
+0.84,0.8,0.9,0.605,0.025,-0.025,0.018,-0.018
+0.97,0.9,1.3,0.536,0.032,-0.032,0.016,-0.016
+

@@ -1,0 +1,21 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t18
+#: name: Table 18
+#: description: P multiplicty ratio (Neon/Deuterium) as a function of Q**2.
+
+#: data_file: Table18.yaml
+#: keyword reactions: E- DEUT --> E P X | E+ DEUT --> E+ P X | E- NE --> E- P X | E+ NE --> E+ P X | E- NUCLEUS --> E- P X | E+ NUCLEUS --> E+ P X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- P X
+#: RE(Q=NE),,,E+- NE --> E+- P X
+#Q**2 [GEV**2],Q**2 [GEV**2] LOW,Q**2 [GEV**2] HIGH,"MULT(P=4,Q=NE)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+1.4,1.0,1.5,1.014,0.012,-0.012,0.029,-0.029
+1.94,1.5,2.0,1.027,0.014,-0.014,0.03,-0.03
+2.74,2.0,3.0,1.015,0.012,-0.012,0.029,-0.029
+3.81,3.0,4.0,1.019,0.017,-0.017,0.03,-0.03
+4.86,4.0,5.0,1.015,0.022,-0.022,0.029,-0.029
+5.84,5.0,6.0,0.993,0.028,-0.028,0.028,-0.028
+7.17,6.0,8.0,1.048,0.031,-0.031,0.03,-0.03
+9.78,8.0,25.0,0.989,0.045,-0.045,0.028,-0.028
+

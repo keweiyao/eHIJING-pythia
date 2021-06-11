@@ -122,11 +122,9 @@ private:
          vetoWeakJets, canReconResSys, doReconnect, doHardDiff,
          forceResonanceCR, doNDgamma, doMPIgmgm, showUnresGamma, eHIJING; 
          // WK: eHIJING
-  int    pTmaxMatchMPI, eHIJING_mode; // WK: eHIJING_mode
-  double mMinDiff, mWidthDiff, pMaxDiff, vetoWeakDeltaR2,
-         AtomicNumber, eHIJING_Kfactor; // WK: AtomicNumber, eHIJING_Kfactor
-  std::string eHIJING_table; // WK: eHIJING_table
-  EHIJING::eHIJING * eHIJING_Gen;
+  int    pTmaxMatchMPI, eHIJING_mode, AtomicNumber, ChargeNumber; // WK: eHIJING_mode, AtomicNumber, eHIJING_Kfactor
+  double mMinDiff, mWidthDiff, pMaxDiff, vetoWeakDeltaR2;
+  EHIJING::NuclearGeometry * eHIJING_Geometry;
 
   // Event generation strategy. Number of steps. Maximum pT scales.
   bool   doVeto;

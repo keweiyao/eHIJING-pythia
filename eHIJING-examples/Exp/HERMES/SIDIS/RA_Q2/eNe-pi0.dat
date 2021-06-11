@@ -1,0 +1,20 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t103
+#: name: Table 103
+#: description: PI0 multiplicity ratio (Neon/Deuterium) as a function of Q**2.
+#: data_file: Table103.yaml
+#: keyword reactions: E- DEUT --> E PI0 X | E+ DEUT --> E+ PI0 X | E- NE --> E- PI0 X | E+ NE --> E+ PI0 X | E- NUCLEUS --> E- PI0 X | E+ NUCLEUS --> E+ PI0 X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- PI0 X
+#: RE(Q=NE),,,E+- NE --> E+- PI0 X
+# Q**2 [GEV**2],Q**2 [GEV**2] LOW,Q**2 [GEV**2] HIGH,"MULT(P=3,Q=NE)/MULT(P=3,Q=DEUT)",stat +,stat -,sys +,sys -
+1.32,1.0,1.5,0.886,0.01,-0.01,0.028,-0.028
+1.87,1.5,2.0,0.909,0.012,-0.012,0.029,-0.029
+2.63,2.0,3.0,0.915,0.011,-0.011,0.029,-0.029
+3.66,3.0,4.0,0.919,0.016,-0.016,0.029,-0.029
+4.69,4.0,5.0,0.931,0.022,-0.022,0.029,-0.029
+5.69,5.0,6.0,0.942,0.03,-0.03,0.03,-0.03
+7.06,6.0,8.0,0.944,0.033,-0.033,0.03,-0.03
+9.64,8.0,25.0,0.921,0.053,-0.053,0.029,-0.029
+

@@ -9,37 +9,42 @@ Random:seed = 0
 Beams:idA = 2212
 Beams:idB = 11
 Beams:frameType = 2
-Beams:eA = 0.938 # proton beam energy (+,0,0,+) [GeV]
+Beams:eA = 0 # proton beam energy (+,0,0,+) [GeV], E=max(M, eA)
 Beams:eB = 27.6 # electron beam energy (+,0,0,-) [GeV]
+
+
 
 # Phasespace cut:
 # Minimum hard scale squared [GeV^2]
 PhaseSpace:Q2Min = 1
 
 # >>>>>> Do not change the following without a good reason...
+PDF:lepton = off
+
+PhaseSpace:mHatMin = 0 # this is important if you are at HEMES energy
 WeakBosonExchange:ff2ff(t:gmZ) = on
 WeakBosonExchange:ff2ff(t:W) = off
-TimeShower:QEDshowerByL = off
-PDF:lepton = off   
+
 
 SpaceShower:QCDshower = on
+SpaceShower:pTmaxMatch = 2
 SpaceShower:dipoleRecoil = off
+
+TimeShower:QCDshower = on
 TimeShower:interleave = off
-TimeShower:phiPolAsym = on
+TimeShower:QEDshowerByL = off
 
 PartonLevel:Remnants = on
-Check:event = on
+Check:event = off
 HadronLevel:all = off
 HadronLevel:decay = off
 
 Tune:pp = 19
-PDF:pset = 8
+PDF:pset = 12
 PDF:useHard = on
 PDF:useHardNPDFA = on
 # <<<<<< Do not change aboves without a good reason...
 
 # eHIJING Switch
 eHIJING:all = on
-eHIJING:Mode = 1
-eHIJING:mu2 = .25
-
+eHIJING:Mode = 0

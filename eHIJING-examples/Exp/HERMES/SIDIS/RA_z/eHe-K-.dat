@@ -1,0 +1,22 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t41
+#: name: Table 41
+#: description: K- multiplicity ratio (Helium/Deuterium) as a function of Z.
+
+#: data_file: Table41.yaml
+#: keyword reactions: E- DEUT --> E K- X | E+ DEUT --> E+ K- X | E- HE --> E- K- X | E+ HE --> E+ K- X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Strange production | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- K- X
+#: RE(Q=HE),,,E+- HE --> E+- K- X
+Z,Z LOW,Z HIGH,"MULT(P=4,Q=HE)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+0.16,0.1,0.2,0.946,0.019,-0.019,0.028,-0.028
+0.25,0.2,0.3,0.969,0.019,-0.019,0.028,-0.028
+0.34,0.3,0.4,0.934,0.022,-0.022,0.027,-0.027
+0.44,0.4,0.5,0.959,0.029,-0.029,0.027,-0.027
+0.55,0.5,0.6,0.941,0.036,-0.036,0.027,-0.027
+0.64,0.6,0.7,0.908,0.051,-0.051,0.027,-0.027
+0.74,0.7,0.8,0.778,0.073,-0.073,0.03,-0.03
+0.84,0.8,0.9,0.925,0.134,-0.134,0.044,-0.044
+0.94,0.9,1.3,0.529,0.163,-0.163,0.041,-0.041
+

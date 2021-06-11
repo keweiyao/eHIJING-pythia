@@ -1,0 +1,21 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t35
+#: name: Table 35
+#: description: K+ multiplicty ratio (Xenon/Deuterium) as a function of Q**2.
+
+#: data_file: Table35.yaml
+#: keyword reactions: E- DEUT --> E K+ X | E+ DEUT --> E+ K+ X | E- XE --> E- K+ X | E+ XE --> E+ K+ X | E- NUCLEUS --> E- K+ X | E+ NUCLEUS --> E+ K+ X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Strange production | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- K+ X
+#: RE(Q=XE),,,E+- XE --> E+- K+ X
+#Q**2 [GEV**2],Q**2 [GEV**2] LOW,Q**2 [GEV**2] HIGH,"MULT(P=4,Q=XE)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+1.36,1.0,1.5,0.858,0.012,-0.012,0.024,-0.024
+1.92,1.5,2.0,0.863,0.014,-0.014,0.025,-0.025
+2.65,2.0,3.0,0.865,0.013,-0.013,0.025,-0.025
+3.75,3.0,4.0,0.879,0.018,-0.018,0.025,-0.025
+4.76,4.0,5.0,0.878,0.023,-0.023,0.025,-0.025
+5.78,5.0,6.0,0.845,0.03,-0.03,0.024,-0.024
+7.12,6.0,8.0,0.839,0.031,-0.031,0.024,-0.024
+9.71,8.0,25.0,0.851,0.047,-0.047,0.024,-0.024
+

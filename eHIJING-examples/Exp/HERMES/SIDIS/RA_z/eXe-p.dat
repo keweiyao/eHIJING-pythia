@@ -1,0 +1,22 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t33
+#: name: Table 33
+#: description: P multiplicty ratio (Xenon/Deuterium) as a function of Z.
+
+#: data_file: Table33.yaml
+#: keyword reactions: E- DEUT --> E P X | E+ DEUT --> E+ P X | E- XE --> E- P X | E+ XE --> E+ P X | E- NUCLEUS --> E- P X | E+ NUCLEUS --> E+ P X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- P X
+#: RE(Q=XE),,,E+- XE --> E+- P X
+Z,Z LOW,Z HIGH,"MULT(P=4,Q=XE)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+0.19,0.1,0.2,1.055,0.042,-0.042,0.072,-0.072
+0.25,0.2,0.3,1.154,0.015,-0.015,0.036,-0.036
+0.35,0.3,0.4,0.998,0.013,-0.013,0.029,-0.029
+0.44,0.4,0.5,0.923,0.014,-0.014,0.03,-0.03
+0.55,0.5,0.6,0.823,0.018,-0.018,0.025,-0.025
+0.64,0.6,0.7,0.737,0.023,-0.023,0.032,-0.032
+0.74,0.7,0.8,0.653,0.03,-0.03,0.02,-0.02
+0.84,0.8,0.9,0.689,0.048,-0.048,0.021,-0.021
+0.95,0.9,1.3,0.504,0.06,-0.06,0.035,-0.035
+

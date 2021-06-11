@@ -1,4 +1,10 @@
-eHIJING-examples/build
+eHIJING-examples/build/
+eHIJING-examples/Run/
 tmp/
+*.pdf
+*.png
+*.tex
+~*
+*~
 cpp_interface/results*/
 cpp_interface/Tables/

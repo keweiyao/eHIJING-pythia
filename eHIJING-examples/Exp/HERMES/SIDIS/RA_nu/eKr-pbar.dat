@@ -1,0 +1,22 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t57
+#: name: Table 57
+#: description: PBAR multiplicity ratio (Krypton/Deuterium) as a function of NU.
+
+#: data_file: Table57.yaml
+#: keyword reactions: E- DEUT --> E PBAR X | E+ DEUT --> E+ PBAR X | E- KR --> E- PBAR X | E+ KR --> E+ PBAR X | E- NUCLEUS --> E- PBAR X | E+ NUCLEUS --> E+ PBAR X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- PBAR X
+#: RE(Q=KR),,,E+- KR --> E+- PBAR X
+#NU [GEV],NU [GEV] LOW,NU [GEV] HIGH,"MULT(P=4,Q=KR)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+5.27,4.0,6.0,0.547,0.064,-0.064,0.055,-0.055
+7.15,6.0,8.0,0.499,0.036,-0.036,0.057,-0.057
+9.08,8.0,10.0,0.545,0.029,-0.029,0.045,-0.045
+11.06,10.0,12.0,0.58,0.025,-0.025,0.04,-0.04
+13.04,12.0,14.0,0.594,0.024,-0.024,0.033,-0.033
+15.02,14.0,16.0,0.626,0.024,-0.024,0.033,-0.033
+16.97,16.0,18.0,0.661,0.027,-0.027,0.039,-0.039
+18.99,18.0,20.0,0.729,0.033,-0.033,0.041,-0.041
+21.62,20.0,23.5,0.811,0.038,-0.038,0.036,-0.036
+

@@ -610,7 +610,6 @@ public:
   void setRx(const double & a) {Rx_ = a;}
   void setRy(const double & a) {Ry_ = a;}
   void setRz(const double & a) {Rz_ = a;}
-  void fill_elastic_collision(Particle & p);
 
 private:
 

@@ -77,17 +77,10 @@ bool PartonLevel::init( Info* infoPtrIn, Settings& settings,
                      : 0;
   // WK: eHIJING flag and qhat0g
   eHIJING            = settings.flag("eHIJING:all");
-  eHIJING_Kfactor    = settings.parm("eHIJING:Kfactor");
-  eHIJING_mode       = settings.parm("eHIJING:Mode");
-  eHIJING_table      = "./Tables";
-
   AtomicNumber       = settings.parm("eHIJING:AtomicNumber");
-  std::cout << "init EHIJING 2<<"<<std::endl;
-  if (eHIJING){
-    eHIJING_Gen = new EHIJING::eHIJING(eHIJING_mode, eHIJING_Kfactor);
-    eHIJING_Gen->Tabulate(eHIJING_table);
-  }
-  std::cout << "Done 2<<"<<std::endl;
+  ChargeNumber       = settings.parm("eHIJING:ChargeNumber");
+  eHIJING_Geometry = new EHIJING::NuclearGeometry(AtomicNumber, ChargeNumber);
+  
 
   // Separate low-mass (unresolved) and high-mass (perturbative) diffraction.
   mMinDiff           = settings.parm("Diffraction:mMinPert");
@@ -985,63 +978,6 @@ bool PartonLevel::next( Event& process, Event& event) {
       } while (pTmax > 0.  && (nBranchMax <= 0 || nBranch < nBranchMax) );
     }
 
-
-
-
-    // WK >>>
-    // collision broadening
-    if (false) {
-
-    // WK >>>
-      Vec4 pProton = event[1].p(); // four-momentum of proton
-      Vec4 peIn    = event[4].p(); // incoming electron
-      int hardid = event[5].id();
-      Vec4 peOut   = event[6].p(); // outgoing electron
-      Vec4 pGamma = peIn - peOut; // virtual boson photon/Z^0/W^+-
-
-      // Q2, W2, Bjorken x, y.
-      double Q2 = - pGamma.m2Calc(); // hard scale square
-      double Q  = std::sqrt(Q2);
-      double W2 = (pProton + pGamma).m2Calc(); // center-of-mass energy 
-                                                  // of gamma-p collision
-      double gammaContraction = std::sqrt(W2)/2./0.938; 
-      double xB  = Q2 / (2. * pProton * pGamma); // Bjorken x
-
-        for (int i=0; i<event.size(); i++) {
-            auto & p = event[i];
-            if (p.isParton() && p.isFinal() && p.id()==hardid){
-
-    double vx = p.px()/p.pAbs(),
-           vy = p.py()/p.pAbs(),
-           vz = p.pz()/p.pAbs();
-    double xdotv = event.Rx()*vx + event.Ry()*vy + event.Rz()*vz;
-    double R2 = pow2(1.12*pow(AtomicNumber, 1./3.)*5.076), 
-           x2 = pow2(event.Rx())+pow2(event.Ry())+pow2(event.Rz());
-    double L = -xdotv + std::sqrt((R2-x2)+xdotv*xdotv);
-    // WK <<<
-
-
-                std::vector<double> qt2s, ts;
-                eHIJING_Gen->sample_all_qt2(p.id(), p.e(), L, xB, Q2, qt2s, ts);
-                double Qx=0., Qy=0., Qz=0.;
-                for (auto & q2 : qt2s){
-                    double phi = 2*M_PI*rndmPtr->flat(), qT = std::sqrt(q2);
-                    Qx += qT*std::cos(phi);
-                    Qy += qT*std::sin(phi);
-                    Qz += q2/Q2*xB*std::sqrt(W2);
-                }
-                Vec4 qmu{Qx,Qy,Qz,0};
-                qmu.rot(p.theta(), 0.);
-                qmu.rot(0., p.phi());
-                p.p(p.p()+qmu);
-                p.e(std::sqrt(p.pAbs2()+p.m2()));
-            }
-        }
-    }
-
-
-
-
     // Handle veto after ISR + FSR + MPI, but before beam remnants
     // and resonance decays, e.g. for MLM matching.
     if (canVetoEarly && userHooksPtr->doVetoPartonLevelEarly( event)) {
@@ -1435,22 +1371,16 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
 // Set up the hard process(es), excluding subsequent resonance decays.
 
 void PartonLevel::setupHardSys(Event& process, Event& event) {
-  // WK>>>
+  // WK >>>
   // Sample hard location in the rest frame of A
   if(eHIJING){
-    double RA = 1.12*pow(AtomicNumber, 1./3.)*5.076;
-    double radius = RA * std::pow(rndmPtr->flat(), 1./3.);
-    double costheta = -1.+2.*rndmPtr->flat(),
-           sintheta = std::sqrt(1.-costheta*costheta);
-    double phi = 2.*M_PI*rndmPtr->flat();
-    double Xhard = radius*sintheta*std::cos(phi),
-           Yhard = radius*sintheta*std::sin(phi),
-           Zhard = radius*costheta;
-    event.setRx(Xhard);
-    event.setRy(Yhard);
-    event.setRz(Zhard);
+    double rx, ry, rz;
+    eHIJING_Geometry->sample_HardVertex(rx, ry, rz);
+    event.setRx(rx);
+    event.setRy(ry);
+    event.setRz(rz);
   }
-  // WK<<<
+  // WK <<<
 
   // Incoming partons to hard process are stored in slots 3 and 4.
   int inS = 0;
@@ -1559,7 +1489,6 @@ void PartonLevel::setupHardSys(Event& process, Event& event) {
     if (process[i].mother1() > inM) break;
     // WK >>>
     // beam and hard subprocess partons to the event record.
-
     if (eHIJING && process[i].isParton() && process[i].status()>0
         ) {
       // This should be mostly u quark and sometimes d quark
@@ -1568,7 +1497,6 @@ void PartonLevel::setupHardSys(Event& process, Event& event) {
       process[i].setRx(event.Rx());
       process[i].setRy(event.Ry());
       process[i].setRz(event.Rz());
-      event.fill_elastic_collision(process[i]);
     }
     // WK <<<
 
@@ -1638,7 +1566,6 @@ void PartonLevel::setupHardSys(Event& process, Event& event) {
         process[i].setRx(event.Rx());
         process[i].setRy(event.Ry());
         process[i].setRz(event.Rz());
-        event.fill_elastic_collision(process[i]);
       }
       // WK <<<
       event.append(process[i]);

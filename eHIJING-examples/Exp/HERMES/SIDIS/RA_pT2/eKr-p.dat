@@ -1,0 +1,21 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t87
+#: name: Table 87
+#: description: P multiplicity ratio (Krypton/Deuterium) as a function of PT**2.
+#: data_file: Table87.yaml
+#: keyword reactions: E- DEUT --> E P X | E+ DEUT --> E+ P X | E- KR --> E- P X | E+ KR --> E+ P X | E- NUCLEUS --> E- P X | E+ NUCLEUS --> E+ P X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- P X
+#: RE(Q=KR),,,E+- KR --> E+- P X
+#PT**2 [GEV**2],PT**2 [GEV**2] LOW,PT**2 [GEV**2] HIGH,"MULT(P=4,Q=KR)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+0.023,0.0,0.05,0.936,0.01,-0.01,0.034,-0.034
+0.073,0.05,0.1,0.954,0.013,-0.013,0.029,-0.029
+0.183,0.1,0.3,0.953,0.009,-0.009,0.031,-0.031
+0.386,0.3,0.5,1.051,0.016,-0.016,0.042,-0.042
+0.587,0.5,0.7,1.18,0.028,-0.028,0.05,-0.05
+0.789,0.7,0.9,1.27,0.044,-0.044,0.052,-0.052
+0.986,0.9,1.1,1.38,0.07,-0.07,0.073,-0.073
+1.223,1.1,1.4,1.505,0.095,-0.095,0.077,-0.077
+1.826,1.4,1.95,1.933,0.147,-0.147,0.142,-0.142
+

@@ -1,0 +1,21 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t74
+#: name: Table 74
+#: description: K+ multiplicity ratio (Helium/Deuterium) as a function of PT**2.
+#: data_file: Table74.yaml
+#: keyword reactions: E- DEUT --> E K+ X | E+ DEUT --> E+ K+ X | E- HE --> E- K+ X | E+ HE --> E+ K+ X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Strange production | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- K+ X
+#: RE(Q=HE),,,E+- HE --> E+- K+ X
+# PT**2 [GEV**2],PT**2 [GEV**2] LOW,PT**2 [GEV**2] HIGH,"MULT(P=4,Q=HE)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+0.023,0.0,0.05,0.967,0.015,-0.015,0.028,-0.028
+0.073,0.05,0.1,0.98,0.019,-0.019,0.028,-0.028
+0.185,0.1,0.3,0.962,0.012,-0.012,0.027,-0.027
+0.386,0.3,0.5,0.943,0.019,-0.019,0.027,-0.027
+0.585,0.5,0.7,0.917,0.029,-0.029,0.026,-0.026
+0.787,0.7,0.9,0.903,0.044,-0.044,0.026,-0.026
+0.981,0.9,1.1,0.979,0.066,-0.066,0.028,-0.028
+1.233,1.1,1.4,0.973,0.083,-0.083,0.032,-0.032
+1.779,1.4,1.95,0.879,0.097,-0.097,0.026,-0.026
+

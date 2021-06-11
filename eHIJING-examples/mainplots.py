@@ -1,4 +1,4 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
 import os, subprocess
 import logging
 from pathlib import Path
@@ -72,13 +72,14 @@ plt.rcParams.update({
     'pdf.fonttype': 42
 })
 cm1, cm2 = plt.cm.Blues(.8), plt.cm.Reds(.8)
-cb,co,cg,cr = plt.cm.Blues(.6), \
-    plt.cm.Oranges(.6), plt.cm.Greens(.6), plt.cm.Reds(.6)
+cb,co,cg,cr,ck = plt.cm.Blues(.6), \
+    plt.cm.Oranges(.6), plt.cm.Greens(.6), plt.cm.Reds(.6),\
+    plt.cm.copper(.1)
 offblack = '#262626'
 gray = '0.8'
 
 
-plotdir = Path('plots')
+plotdir = Path('GHT-plots')
 plotdir.mkdir(exist_ok=True)
 
 plot_functions = {}
@@ -98,8 +99,8 @@ def plot(f):
 
         if not fig.get_tight_layout():
             set_tight(fig)
-
-        plotfile = plotdir / '{}.png'.format(f.__name__)
+        os.makedirs(plotdir /f.__name__.split('_')[0], exist_ok=True)
+        plotfile = plotdir /f.__name__.split('_')[0]/ '{}.png'.format(f.__name__.split('_')[1])
         fig.savefig(str(plotfile), dpi=300)
         logging.info('wrote %s', plotfile)
         plt.close(fig)
@@ -138,7 +139,7 @@ def auto_ticks(ax, axis='both', minor=False, **kwargs):
         if minor:
             axis.set_minor_locator(ticker.AutoMinorLocator(minor))
 
-def darken(rgb, amount=.3):
+def darken(rgb, amount=.15):
     """
     Darken a color by the given amount in HSLuv space.
 
@@ -147,41 +148,21 @@ def darken(rgb, amount=.3):
     return hsluv.hsluv_to_rgb((h, s, (1 - amount)*l))
 
 
-def obs_color_hsluv(obs, nPDF):
-    """
-    Return a nice color for the given observable in HSLuv space.
-    Use obs_color() to obtain an RGB color.
-
-    """
-    if obs == 'RAA':
-        return 250, 90, 55
-
-    if 'V2' in obs:
-        return 250, 90, 55
-
-    if obs == 'qhat':
-        return 250, 90, 55
-
-    if obs == 'posterior':
-        return 250, 90, 55
-
-    raise ValueError('unknown observable: {} {}'.format(obs, subobs))
-
-
+NCZA = ['He','Ne','Kr','Xe'],[cb,cg,cr,ck],[2,10,36,54],[4,20,84,131]
 
 @plot
-def pT_dist():
+def ed_dNdzdpT():
     fig, axes = plt.subplots(4,4,figsize=(1.2*textwidth,1.2*textwidth), sharey=False,sharex=True)
     name = {211:"$\pi^+$",
            -211:"$\pi^-$",
             321:"$K^+$",
            -321:"$K^-$"}
-    
+
     b = np.linspace(0,1,10)
     x = (b[:-1]+b[1:])/2.
     dx = b[1:]-b[:-1]
     Ne = 1e5
-    pid, z, pT = np.loadtxt("baseline/1-2-cutRA.dat").T
+    pid, z, pT, nu, Q2 = np.loadtxt("Run/baseline/1-2-cutRA.dat").T
     for row, zbin in zip(axes,[[.2,.3],[.3,.4],[.4,.6],[.6,.8]]):
         for ax,iid in zip(row,[211,-211,321,-321]):
             cut = (pid==iid) & (zbin[0]<z) & (z<zbin[1])
@@ -226,13 +207,13 @@ def pT_dist():
 
 
 @plot
-def z_dist():
+def ed_dNdz():
     fig, axes = plt.subplots(2,4,figsize=(1.2*textwidth,.6*textwidth), sharex=True)
     name = {211:"$\pi^+$",
            -211:"$\pi^-$",
             321:"$K^+$",
            -321:"$K^-$"}
-    
+
 
     for ax,iid,n in zip(axes[0],[211,-211,321,-321],['pi+','pi-','K+','K-']):
         x,y,ystat,_,ysys,_ = np.loadtxt("ExpData/z/ed-{}.dat".format(n)).T
@@ -242,12 +223,10 @@ def z_dist():
         xb = [0.1]+list((x[1:]+x[:-1])/2.) + [.9]
         for il,ih,yl,yh in zip(xb[:-1],xb[1:],y-ysys,y+ysys):
             ax.fill_between([il,ih],[yl,yl],[yh,yh],
-                            edgecolor='k',facecolor='none')  
-
-    #xb = np.linspace(0,1,10)
+                            edgecolor='k',facecolor='none')
 
     Ne = 1e5
-    pid, z, pT = np.loadtxt("baseline/1-2-cutRA.dat").T
+    pid, z, pT, nu, Q2 = np.loadtxt("Run/baseline/1-2-cutRA.dat").T
     for ax,axr,iid,n in zip(axes[0],axes[1],[211,-211,321,-321],['pi+','pi-','K+','K-']):
         x,y,ystat,_,ysys,_ = np.loadtxt("ExpData/z/ed-{}.dat".format(n)).T
         xb = [0.1]+list((x[1:]+x[:-1])/2.) + [.9]
@@ -288,11 +267,11 @@ def z_dist():
     #for i in [2,3]:
     #    axes[i].set_ylim(1e-2,1)
     set_tight(fig,pad=0.4)
-   
 
 
 
-   
+
+
 
 def RA_z(iid):
     sid = {211:'pi+', -211:'pi-', 111:'pi0',
@@ -302,33 +281,31 @@ def RA_z(iid):
            321:'K^+',  -321:'K^-',
            2212:'p',  -2212:"\\bar{p}"}[iid]
     fig, ax = plt.subplots(1,1,figsize=(.55*textwidth,.5*textwidth), sharey=True,sharex=True)
-    bins = np.array([.1,.2,.3,.4,.5,.6,.7,.8,.9, 1])
+    bins = np.array([.1,.2,.3,.4,.5,.6,.7,.8,.9, 1.])
     db = bins[1:]-bins[:-1]
     zm = (bins[1:]+bins[:-1])/2.
-    pid, z, pT = np.loadtxt("test-el/1-2-cutRA.dat", usecols=[0,1,2]).T
-    cut = pid==iid
-    Y0 = np.histogram(z[cut],bins=bins)[0]/db/4e4
-    Q = 1
-    for N,color,Z,A in zip(['He','Ne','Kr','Xe'],[cr,cg,cb,co,'k'],
-                           [2,10,36,54],[4,20,84,131]):
-        pid, z, pT = np.loadtxt("test-el/{}-{}-cutRA.dat".format(Z,A), usecols=[0,1,2]).T
-        cut = pid==iid
-        Y = np.histogram(z[cut],bins=bins)[0]/db/4e4
-        ax.plot(zm, Y/Y0, color=color, label=r"$e$-HIJING", alpha=.7)
+    pid, z, pT, nu, Q2 = np.loadtxt("Run/test-el/1-2-cutRA.dat").T
+    cut = (pid==iid) & (nu>6)
+    Y0 = np.histogram(z[cut],bins=bins)[0]/db
+    for N,color,Z,A in zip(*NCZA):
+        pid, z, pT, nu, Q2 = np.loadtxt("Run/test-el/{}-{}-cutRA.dat".format(Z,A)).T
+        cut = ( pid==iid ) & (nu>6)
+        Y = np.histogram(z[cut],bins=bins)[0]/db
+        ax.plot(zm, Y/Y0, color=color, alpha=.7)
     ax.set_xlim(.0,1.5)
     ax.plot([.0,1.5],[1,1],'k-',lw=.3)
 
-    for N,color,A in zip(['He','Ne','Kr','Xe'],[cr,cg,cb,co],[4,20,84,131]):
+    for N,color,Z,A in zip(*NCZA):
         x,xl,xh,y,ystat,_,ysys,_ = \
-       np.loadtxt("Exp/HERMES/SIDIS/RA_z/e{}-{}.dat".format(N,sid), 
+       np.loadtxt("Exp/HERMES/SIDIS/RA_z/e{}-{}.dat".format(N,sid),
                  skiprows=12,
                  delimiter=',').T
-        ax.errorbar(x,y,yerr=ystat,fmt='.', color=darken(color), 
+        ax.errorbar(x,y,yerr=ystat,fmt='.', color=darken(color),
                  label=r'HERMES ${{}}^{{{:d}}}${:s}'.format(A,N))
         for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
             ax.fill_between([il,ih],[yl,yl],[yh,yh],
                             edgecolor=darken(color),facecolor='none')
-    
+
     ax.legend(ncol=2,loc='lower left')
     ax.set_ylim(0,1.5)
     ax.set_xlabel(r"$z_h=E_h/\nu$ in target frame")
@@ -336,28 +313,6 @@ def RA_z(iid):
     ax.annotate(r"${:s}$".format(ssid),xy=(.07,.9),xycoords="axes fraction")
     set_tight(fig, pad=.2)
 
-@plot
-def Rpi0():
-    RA_z(111)
-
-@plot
-def Rpi_p():
-    RA_z(211)
-@plot
-def Rpi_m():
-    RA_z(-211)
-@plot
-def RK_p():
-    RA_z(321)
-@plot
-def RK_m():
-    RA_z(-321)
-@plot
-def Rp():
-    RA_z(2212)
-@plot
-def Rpbar():
-    RA_z(-2212)
 
 def RA_pT(iid):
     sid = {211:'pi+', -211:'pi-', 111:'pi0',
@@ -368,32 +323,28 @@ def RA_pT(iid):
            2212:'p',  -2212:"\\bar{p}"}[iid]
     fig, ax = plt.subplots(1,1,figsize=(.55*textwidth,.5*textwidth), sharey=False,sharex=True)
 
-    for N,color,A in zip(['He','Ne','Kr','Xe'],[cr,cg,cb,co],[4,20,84,131]):
+    for N,color,Z,A in zip(*NCZA):
         x,xl,xh,y,ystat,_,ysys,_ = \
-            np.loadtxt("Exp/HERMES/SIDIS/RA_pT2/e{}-{}.dat".format(N,sid), 
+            np.loadtxt("Exp/HERMES/SIDIS/RA_pT2/e{}-{}.dat".format(N,sid),
             #skiprows=12,
             delimiter=',').T
-        print(x,y)
-        ax.errorbar(x,y,yerr=ystat,fmt='.', color=darken(color), 
+        ax.errorbar(x,y,yerr=ystat,fmt='.', color=darken(color),
                  label=r'HERMES ${{}}^{{{:d}}}${:s}'.format(A,N))
         for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
             ax.fill_between([il,ih],[yl,yl],[yh,yh],
                             edgecolor=darken(color),facecolor='none')
-    
+
     b = np.linspace(0,1.4,10)
     x = (b[:-1]+b[1:])/2.
     dx = b[1:]-b[:-1]
-    Ne = 4e5
     zmin = 0.2
-    pid, z, pT = np.loadtxt("test-el/1-2-cutRA.dat", usecols=[0,1,2]).T
-    cut = (pid == iid) & (z>zmin)
-    Y0 = np.histogram(pT[cut],bins=b)[0]/dx/Ne
-    for N,color,(Z,A) in zip(['He','Ne','Kr','Xe'],
-                                [cr,cg,cb,co,'k'],
-                                [(2,4),(10,20),(36,84),(54,131)]):
-        pid, z, pT = np.loadtxt("test-el/{}-{}-cutRA.dat".format(Z,A), usecols=[0,1,2]).T
-        cut = (pid == iid) & (z>zmin)
-        Y = np.histogram(pT[cut],bins=b)[0]/dx/Ne
+    pid, z, pT, nu, Q2 = np.loadtxt("Run/test-el/1-2-cutRA.dat").T
+    cut = (pid == iid) & (z>zmin) & (nu>6)
+    Y0 = np.histogram(pT[cut],bins=b)[0]/dx
+    for N,color,Z,A in zip(*NCZA):
+        pid, z, pT, nu, Q2 = np.loadtxt("Run/test-el/{}-{}-cutRA.dat".format(Z,A)).T
+        cut = (pid == iid) & (z>zmin)& (nu>6)
+        Y = np.histogram(pT[cut],bins=b)[0]/dx
         ax.plot(x**2, Y/Y0, color=color, lw=1,alpha=.8)
     ax.plot([1e-2,10],[1,1],'k-', lw=.5)
     ax.set_xlim(0,2)
@@ -404,36 +355,189 @@ def RA_pT(iid):
     ax.annotate(r"${:s}$".format(ssid),xy=(.6,.9),xycoords="axes fraction")
     set_tight(fig,pad=0.2)
 
+
+def RA_nu(iid):
+    sid = {211:'pi+', -211:'pi-', 111:'pi0',
+           321:'K+',  -321:'K-',
+           2212:'p',  -2212:'pbar'}[iid]
+    ssid = {211:'\pi^+', -211:'\pi^-', 111:'\pi^0',
+           321:'K^+',  -321:'K^-',
+           2212:'p',  -2212:"\\bar{p}"}[iid]
+    fig, ax = plt.subplots(1,1,figsize=(.55*textwidth,.5*textwidth), sharey=False,sharex=True)
+
+    for N,color,Z,A in zip(*NCZA):
+        x,xl,xh,y,ystat,_,ysys,_ = \
+            np.loadtxt("Exp/HERMES/SIDIS/RA_nu/e{}-{}.dat".format(N,sid),
+            #skiprows=12,
+            delimiter=',').T
+        ax.errorbar(x,y,yerr=ystat,fmt='.', color=darken(color),
+                 label=r'HERMES ${{}}^{{{:d}}}${:s}'.format(A,N))
+        for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
+            ax.fill_between([il,ih],[yl,yl],[yh,yh],
+                            edgecolor=darken(color),facecolor='none')
+
+    b = np.linspace(4,25,10)
+    x = (b[:-1]+b[1:])/2.
+    dx = b[1:]-b[:-1]
+    zmin = 0.2
+    pid, z, pT, nu, Q2 = np.loadtxt("Run/test-el/1-2-cutRA.dat").T
+    cut = (pid == iid) & (z>zmin)
+    Y0 = np.histogram(nu[cut],bins=b)[0]/dx
+    for N,color,Z, A in zip(*NCZA):
+        pid, z, pT, nu, Q2 = np.loadtxt("Run/test-el/{}-{}-cutRA.dat".format(Z,A)).T
+        cut = (pid == iid) & (z>zmin)
+        Y = np.histogram(nu[cut],bins=b)[0]/dx
+        ax.plot(x, Y/Y0, color=color, lw=1,alpha=.8)
+    ax.plot([0,25],[1,1],'k-', lw=.5)
+    ax.set_xlim(0,25)
+    ax.set_ylim(0,1.5)
+    ax.set_xlabel(r"$\nu$ [GeV]")
+    ax.set_ylabel(r"$R_{A}$")
+    ax.legend(loc="upper left")
+    ax.annotate(r"${:s}$".format(ssid),xy=(.6,.9),xycoords="axes fraction")
+    set_tight(fig,pad=0.2)
+
+def RA_Q2(iid):
+    sid = {211:'pi+', -211:'pi-', 111:'pi0',
+           321:'K+',  -321:'K-',
+           2212:'p',  -2212:'pbar'}[iid]
+    ssid = {211:'\pi^+', -211:'\pi^-', 111:'\pi^0',
+           321:'K^+',  -321:'K^-',
+           2212:'p',  -2212:"\\bar{p}"}[iid]
+    fig, ax = plt.subplots(1,1,figsize=(.55*textwidth,.5*textwidth), sharey=False,sharex=True)
+
+    for N,color,Z,A in zip(*NCZA):
+        x,xl,xh,y,ystat,_,ysys,_ = \
+            np.loadtxt("Exp/HERMES/SIDIS/RA_Q2/e{}-{}.dat".format(N,sid),
+            #skiprows=12,
+            delimiter=',').T
+        ax.errorbar(x,y,yerr=ystat,fmt='.', color=darken(color),
+                 label=r'HERMES ${{}}^{{{:d}}}${:s}'.format(A,N))
+        for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
+            ax.fill_between([il,ih],[yl,yl],[yh,yh],
+                            edgecolor=darken(color),facecolor='none')
+
+    b = np.exp(np.linspace(np.log(1),np.log(25),10))
+    x = (b[:-1]+b[1:])/2.
+    dx = b[1:]-b[:-1]
+    zmin = 0.2
+    pid, z, pT, nu, Q2 = np.loadtxt("Run/test-el/1-2-cutRA.dat").T
+    cut = (pid == iid) & (z>zmin) & (nu>6)
+    Y0 = np.histogram(Q2[cut],bins=b)[0]/dx
+    for N,color,Z,A in zip(*NCZA):
+        pid, z, pT, nu, Q2 = np.loadtxt("Run/test-el/{}-{}-cutRA.dat".format(Z,A)).T
+        cut = (pid == iid) & (z>zmin) & (nu>6)
+        Y = np.histogram(Q2[cut],bins=b)[0]/dx
+
+        ax.plot(x, Y/Y0, color=color, lw=1,alpha=.8)
+    ax.plot([0.5,25],[1,1],'k-', lw=.5)
+    ax.set_xlim(.5,25)
+    ax.set_ylim(0,1.5)
+    ax.semilogx()
+    ax.set_xlabel(r"$Q^2$ [GeV${}^2$]")
+    ax.set_ylabel(r"$R_{A}$")
+    ax.legend(loc="upper left")
+    ax.annotate(r"${:s}$".format(ssid),xy=(.6,.9),xycoords="axes fraction")
+    set_tight(fig,pad=0.2)
+
 @plot
-def RApT_pi0():
+def RQ2_pi0():
+    RA_Q2(111)
+@plot
+def RQ2_pip():
+    RA_Q2(211)
+@plot
+def RQ2_pim():
+    RA_Q2(-211)
+@plot
+def RQ2_Kp():
+    RA_Q2(321)
+@plot
+def RQ2_Km():
+    RA_Q2(-321)
+@plot
+def RQ2_p():
+    RA_Q2(2212)
+@plot
+def RQ2_pbar():
+    RA_Q2(-2212)
+
+@plot
+def Rnu_pi0():
+    RA_nu(111)
+@plot
+def Rnu_pip():
+    RA_nu(211)
+@plot
+def Rnu_pim():
+    RA_nu(-211)
+@plot
+def Rnu_Kp():
+    RA_nu(321)
+@plot
+def Rnu_Km():
+    RA_nu(-321)
+@plot
+def Rnu_p():
+    RA_nu(2212)
+@plot
+def Rnu_pbar():
+    RA_nu(-2212)
+
+@plot
+def Rz_pi0():
+    RA_z(111)
+@plot
+def Rz_pip():
+    RA_z(211)
+@plot
+def Rz_pim():
+    RA_z(-211)
+@plot
+def Rz_Kp():
+    RA_z(321)
+@plot
+def Rz_Km():
+    RA_z(-321)
+@plot
+def Rz_p():
+    RA_z(2212)
+@plot
+def Rz_pbar():
+    RA_z(-2212)
+
+@plot
+def RpT_pi0():
     RA_pT(111)
 @plot
-def RApT_pi_p():
+def RpT_pip():
     RA_pT(211)
 @plot
-def RApT_pi_m():
+def RpT_pim():
     RA_pT(-211)
 @plot
-def RApT_K_p():
+def RpT_Kp():
     RA_pT(321)
 @plot
-def RApT_K_m():
+def RpT_Km():
     RA_pT(-321)
 @plot
-def RApT_p():
+def RpT_p():
     RA_pT(2212)
 @plot
-def RApT_pbar():
+def RpT_pbar():
     RA_pT(-2212)
+
+
 
 
 @plot
 def RA_parton():
-    def v2pi(x): 
+    def v2pi(x):
         if x>1 or x<0:
             return 0;
         return 0.546 * x**(-1.1) * (1-x)**1.28 # pi
-    def g2pi(x): 
+    def g2pi(x):
         if x>1 or x<0:
             return 0;
         return 0.115 * x**1.4 * (1-x)**8 # pi
@@ -448,14 +552,14 @@ def RA_parton():
     bins = np.linspace(0.0,1.5,51)
     db = bins[1:]-bins[:-1]
     zm = (bins[1:]+bins[:-1])/2.
-    pid, z, pT = np.loadtxt("test/1-2-cutRA.dat").T
+    pid, z, pT, _, _ = np.loadtxt("Run/test-el/1-2-cutRA.dat").T
     print(z.max())
     Yg0 = np.histogram(z[pid==21],bins=bins)[0]/db/4e4
     Yq0 = np.histogram(z[np.abs(pid)<3],bins=bins)[0]/db/4e4
     Y0 = convolve(zm, Yq0, Yg0)
     for N,color,Z,A in zip(['He','Ne','Kr','Xe'],[cr,cg,cb,co,'k'],
                            [2,10,36,54],[4,20,84,131]):
-        pid, z, pT = np.loadtxt("test/{}-{}-cutRA.dat".format(Z,A)).T
+        pid, z, pT, _, _ = np.loadtxt("Run/test-el/{}-{}-cutRA.dat".format(Z,A)).T
         print(z.max())
         cut = pid==21
         Yg = np.histogram(z[cut],bins=bins)[0]/db/4e4
@@ -471,15 +575,15 @@ def RA_parton():
 
     for N,color,A in zip(['He','Ne','Kr','Xe'],[cr,cg,cb,co],[4,20,84,131]):
         x,xl,xh,y,ystat,_,ysys,_ = \
-       np.loadtxt("Exp/HERMES/SIDIS/RA_z/e{}-{}.dat".format(N,'pi+'), 
+       np.loadtxt("Exp/HERMES/SIDIS/RA_z/e{}-{}.dat".format(N,'pi+'),
                  skiprows=12,
                  delimiter=',').T
-        ax.errorbar(x,y,yerr=ystat,fmt='.', color=darken(color), 
+        ax.errorbar(x,y,yerr=ystat,fmt='.', color=darken(color),
                  label=r'HERMES ${{}}^{{{:d}}}${:s}'.format(A,'pi+'))
         for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
             ax.fill_between([il,ih],[yl,yl],[yh,yh],
                             edgecolor=darken(color),facecolor='none')
-    
+
     ax.legend(ncol=2,loc='lower left')
     ax.set_ylim(0,1.2)
     ax.set_xlabel(r"$z_h=E_h/\nu$ in target frame")
@@ -510,5 +614,6 @@ if __name__ == '__main__':
         for p in args.plots:
             plot_functions[p]()
     else:
-        for f in plot_functions.values():
+        for it, f in zip(plot_functions.keys(), plot_functions.values()):
+            print("Generating ", it+".png")
             f()

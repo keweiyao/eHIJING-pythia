@@ -1,0 +1,22 @@
+#: table_doi: 10.17182/hepdata.13387.v1/t65
+#: name: Table 65
+#: description: K- multiplicity ratio (Xenon/Deuterium) as a function of NU.
+
+#: data_file: Table65.yaml
+#: keyword reactions: E- DEUT --> E K- X | E+ DEUT --> E+ K- X | E- XE --> E- K- X | E+ XE --> E+ K- X | E- NUCLEUS --> E- K- X | E+ NUCLEUS --> E+ K- X
+#: keyword observables: MULT
+#: keyword phrases: Inclusive | Strange production | Electron production | Neutral Current | Deep Inelastic Scattering
+#: E(P=1) [GeV],,,27.6
+#: RE(Q=DEUT),,,E+- DEUT --> E+- K- X
+#: RE(Q=XE),,,E+- XE --> E+- K- X
+#NU [GEV],NU [GEV] LOW,NU [GEV] HIGH,"MULT(P=4,Q=XE)/MULT(P=4,Q=DEUT)",stat +,stat -,sys +,sys -
+5.29,4.0,6.0,0.626,0.064,-0.064,0.021,-0.021
+7.24,6.0,8.0,0.618,0.033,-0.033,0.019,-0.019
+9.11,8.0,10.0,0.663,0.024,-0.024,0.019,-0.019
+11.05,10.0,12.0,0.713,0.021,-0.021,0.021,-0.021
+12.99,12.0,14.0,0.741,0.021,-0.021,0.022,-0.022
+14.97,14.0,16.0,0.753,0.022,-0.022,0.022,-0.022
+16.98,16.0,18.0,0.768,0.024,-0.024,0.022,-0.022
+18.99,18.0,20.0,0.786,0.029,-0.029,0.023,-0.023
+21.55,20.0,23.5,0.813,0.031,-0.031,0.023,-0.023
+
