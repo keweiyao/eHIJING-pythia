@@ -1,12 +1,12 @@
 # PYTHIA configuration file.
-# Generated on Mon 08 Mar 2021 01:57:32 AM PST with the user supplied options:
-# --prefix=/home/weiyao/.local/
+# Generated on Wed 28 Jul 2021 01:17:23 PM PDT with the user supplied options:
+# --prefix=/home/weiyao/miniconda3/envs/ehijing/
 
 # Install directory prefixes.
-PREFIX_BIN=/home/weiyao/.local//bin
-PREFIX_INCLUDE=/home/weiyao/.local//include
-PREFIX_LIB=/home/weiyao/.local//lib
-PREFIX_SHARE=/home/weiyao/.local//share/Pythia8
+PREFIX_BIN=/home/weiyao/miniconda3/envs/ehijing//bin
+PREFIX_INCLUDE=/home/weiyao/miniconda3/envs/ehijing//include
+PREFIX_LIB=/home/weiyao/miniconda3/envs/ehijing//lib
+PREFIX_SHARE=/home/weiyao/miniconda3/envs/ehijing//share/Pythia8
 
 # Compilation flags (see ./configure --help for further documentation).
 ENABLE_SHARED=false

@@ -6,5 +6,9 @@ tmp/
 *.tex
 ~*
 *~
+*.h5
+*.pdf
+*.png
+*.tar.gz
 cpp_interface/results*/
 cpp_interface/Tables/

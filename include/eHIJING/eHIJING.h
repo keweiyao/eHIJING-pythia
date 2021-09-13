@@ -16,7 +16,7 @@ double alphas(double Q2);
 // The normalization at given x and Q2 is choosen such that <x> of gluon is the user given value (~0.3--0.5)
 double PhiG(double x, double q2, double Qs2);
 // alphas*PhiG
-double alphas_PhiG(double x, double q2, double Qs2);
+double alphas_PhiG(double x, double q2, double Qs2, double Q2x, double powerG, double lambdaG, double avgxG);
 
 // A light-weighted N-dimensional table class that supports
 // 1) Setting and retriving data using linear or N-dim indices
@@ -183,11 +183,16 @@ public:
   };
   // compute the qhat of a quark
   double qhatF(double x, double Q2, double TA) {
-      return Kfactor_*CF/CA*qhatA(x, Q2, TA);
+      return CF/CA*qhatA(x, Q2, TA);
   };
   // Sample pure multiple collisions
-  void sample_all_qt2(int pid, double E, double L, double xB, double Q2,
-                      std::vector<double> & q2_list, std::vector<double> & t_list);
+  int sample_all_qt2(int pid, double E, double L, double xB, double Q2,
+                      std::vector<double> & q2_list, std::vector<double> & t_list,
+                     std::vector<double> & phi_list);
+  // sample a collision anyway with q2 > a given minimum
+  void sample_single_qt2(int pid, double E, double L, double xB, double Q2,
+                         double & qx, double & qy, double & xg, double & tq,
+                         double minimum_q2);
   // Collision rate with q2>l2
   double conditioned_qhat_gluon(double l2, double TA, double xB, double Q2){
       return Kfactor_*RateTable.interpolate({TA, std::log(Q2/xB), std::log(l2)});
@@ -252,6 +257,15 @@ public:
     // the splitting should be reject and only keep the evolution in kt2
     bool next_kt2(double & kt2, int pid, double E, double L,
                        double kt2min, double xB, double Q20);
+    bool next_kt2_stochastic(double & kt2, int pid,
+                                     double E,     double kt2min,
+                                     std::vector<double> qt2s,
+                                     std::vector<double> ts);
+    double sample_z_stochastic(double & z, int pid,
+                           double E,
+                           double kt2,
+                           std::vector<double> qt2s,
+                           std::vector<double> ts);
     // Main routinue for sampling the z, if the returned status is false,
     // the splitting should be reject and only keep the evolution in kt2
     bool sample_z(double & z, int pid, double E, double L, double kt2, double xB, double Q20);

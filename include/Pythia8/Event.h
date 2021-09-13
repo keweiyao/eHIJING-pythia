@@ -31,11 +31,6 @@ class Event;
 // Particle class.
 // This class holds info on a particle in general.
 
-struct MultipleCollisionEntry{
-    double L;
-    double q2;
-};
-
 class Particle {
 
 public:
@@ -44,8 +39,8 @@ public:
   Particle() : idSave(0), statusSave(0), mother1Save(0), mother2Save(0),
     daughter1Save(0), daughter2Save(0), colSave(0), acolSave(0),
     pSave(Vec4(0.,0.,0.,0.)), mSave(0.), scaleSave(0.), polSave(9.),
-    hasVertexSave(false), vProdSave(Vec4(0.,0.,0.,0.)), tauSave(0.), tform_(0.),
-    Rx_(0.), Ry_(0.), Rz_(0.),
+    hasVertexSave(false), vProdSave(Vec4(0.,0.,0.,0.)), tauSave(0.),
+    Rx_(0.), Ry_(0.), Rz_(0.), collset_(false),
     pdePtr(0), evtPtr(0) { }
   Particle(int idIn, int statusIn = 0, int mother1In = 0,
     int mother2In = 0, int daughter1In = 0, int daughter2In = 0,
@@ -57,7 +52,7 @@ public:
     daughter2Save(daughter2In), colSave(colIn), acolSave(acolIn),
     pSave(Vec4(pxIn, pyIn, pzIn, eIn)), mSave(mIn), scaleSave(scaleIn),
     polSave(polIn), hasVertexSave(false), vProdSave(Vec4(0.,0.,0.,0.)),
-    tauSave(0.), tform_(0.), Rx_(0.), Ry_(0.), Rz_(0.),
+    tauSave(0.), Rx_(0.), Ry_(0.), Rz_(0.), collset_(false),
     pdePtr(0), evtPtr(0) { }
   Particle(int idIn, int statusIn, int mother1In, int mother2In,
     int daughter1In, int daughter2In, int colIn, int acolIn,
@@ -66,8 +61,8 @@ public:
     mother2Save(mother2In), daughter1Save(daughter1In),
     daughter2Save(daughter2In), colSave(colIn), acolSave(acolIn),
     pSave(pIn), mSave(mIn), scaleSave(scaleIn), polSave(polIn),
-    hasVertexSave(false), vProdSave(Vec4(0.,0.,0.,0.)), tauSave(0.), 
-    tform_(0.), Rx_(0.), Ry_(0.), Rz_(0.),
+    hasVertexSave(false), vProdSave(Vec4(0.,0.,0.,0.)), tauSave(0.),
+    Rx_(0.), Ry_(0.), Rz_(0.), collset_(false),
     pdePtr(0), evtPtr(0) { }
   Particle(const Particle& pt) : idSave(pt.idSave),
     statusSave(pt.statusSave), mother1Save(pt.mother1Save),
@@ -76,10 +71,12 @@ public:
     acolSave(pt.acolSave), pSave(pt.pSave), mSave(pt.mSave),
     scaleSave(pt.scaleSave), polSave(pt.polSave),
     hasVertexSave(pt.hasVertexSave), vProdSave(pt.vProdSave),
-    tauSave(pt.tauSave), tform_(pt.tform_), 
+    tauSave(pt.tauSave), collset_(pt.collset_),
     Rx_(pt.Rx_), Ry_(pt.Ry_), Rz_(pt.Rz_),
     pdePtr(pt.pdePtr), evtPtr(pt.evtPtr),
-    MultipleCollisionArray_(pt.MultipleCollisionArray_) { }
+    coll_ts_(pt.coll_ts_),
+    coll_qt2s_(pt.coll_qt2s_),
+    coll_phis_(pt.coll_phis_) { }
   Particle& operator=(const Particle& pt) {if (this != &pt) {
     idSave = pt.idSave; statusSave = pt.statusSave;
     mother1Save = pt.mother1Save; mother2Save = pt.mother2Save;
@@ -87,10 +84,12 @@ public:
     colSave = pt.colSave; acolSave = pt.acolSave; pSave = pt.pSave;
     mSave = pt.mSave; scaleSave = pt.scaleSave; polSave = pt.polSave;
     hasVertexSave = pt.hasVertexSave; vProdSave = pt.vProdSave;
-    tauSave = pt.tauSave; tform_ = pt.tform_; 
+    tauSave = pt.tauSave; collset_ = pt.collset_;
     Rx_ = pt.Rx_; Ry_ = pt.Ry_; Rz_ = pt.Rz_;
     pdePtr = pt.pdePtr; evtPtr = pt.evtPtr;
-    MultipleCollisionArray_ = pt.MultipleCollisionArray_; }
+    coll_ts_ = pt.coll_ts_;
+    coll_phis_ = pt.coll_phis_;
+    coll_qt2s_ = pt.coll_qt2s_;}
     return *this; }
 
   // Member functions to set the Event and ParticleDataEntry pointers.
@@ -299,38 +298,59 @@ public:
     int addDaughter);
   void offsetCol( int addCol);
 
-  const std::vector<MultipleCollisionEntry> & MultipleCollisionArray() const {
-      return MultipleCollisionArray_;
+  // WK:
+  const std::vector<double> & coll_ts() const {
+      return coll_ts_;
   }
+  const std::vector<double> & coll_qt2s() const {
+      return coll_qt2s_;
+  }
+  const std::vector<double> & coll_phis() const {
+      return coll_phis_;
+  }
+  // WK:
   void ResetMultipleCollision() {
-      MultipleCollisionArray_.clear();
+      collset_ = false;
+      coll_ts_.clear();
+      coll_qt2s_.clear();
+      coll_phis_.clear();
   }
-  void AddMultipleCollision(const MultipleCollisionEntry & a) {
-      MultipleCollisionArray_.push_back(a);
+  // WK:
+  void AddMultipleCollision(std::vector<double> ts,
+                            std::vector<double> qt2s,
+                            std::vector<double> phis) {
+      collset_ = true;
+      coll_ts_ = ts;
+      coll_qt2s_ = qt2s;
+      coll_phis_ = phis;
   }
-  const double tform() const {
-      return tform_;
-  }
-  void settform(const double & t){
-      tform_ = t;
-  }
+  // WK:
   const double Rx() const {
       return Rx_;
   }
+  // WK:
   void setRx(const double & x){
       Rx_ = x;
   }
+  // WK:
   const double Ry() const {
       return Ry_;
   }
+  // WK:
   void setRy(const double & y){
       Ry_ = y;
   }
+  // WK:
   const double Rz() const {
       return Rz_;
   }
+  // WK:
   void setRz(const double & z){
       Rz_ = z;
+  }
+  // WK:
+  const bool collset() const {
+      return collset_;
   }
 
 protected:
@@ -343,11 +363,10 @@ protected:
          daughter2Save, colSave, acolSave;
   Vec4   pSave;
   double mSave, scaleSave, polSave;
-  bool   hasVertexSave;
+  bool   hasVertexSave, collset_; // WK:
   Vec4   vProdSave;
   double tauSave;
-  double tform_; // formation time
-  double Rx_, Ry_, Rz_;
+  double Rx_, Ry_, Rz_; // WK:
 
   // Pointer to properties of the particle species.
   // Should no be saved in a persistent copy of the event record.
@@ -359,7 +378,7 @@ protected:
   // As above it should not be saved.
   Event*             evtPtr;  //!
 
-  std::vector<MultipleCollisionEntry> MultipleCollisionArray_;
+  std::vector<double> coll_qt2s_, coll_ts_, coll_phis_; // WK:
 
 };
 
@@ -463,9 +482,19 @@ public:
   // Event record size.
   int size() const {return entry.size();}
 
+  void fill_coll(Particle & p){
+    if (p.mother1() != 0 && !p.collset()){
+        auto m = entry[p.mother1()];
+        if (m.coll_ts().size()>0)
+            p.AddMultipleCollision(m.coll_ts(), m.coll_qt2s(), m.coll_phis());
+    }
+  }
+
   // Put a new particle at the end of the event record; return index.
   int append(Particle entryIn) {
-    entry.push_back(entryIn); setEvtPtr();
+    //fill_coll(entryIn);
+    entry.push_back(entryIn);
+    setEvtPtr();
     if (entryIn.col() > maxColTag) maxColTag = entryIn.col();
     if (entryIn.acol() > maxColTag) maxColTag = entryIn.acol();
     return entry.size() - 1;
@@ -473,8 +502,11 @@ public:
   int append(int id, int status, int mother1, int mother2, int daughter1,
     int daughter2, int col, int acol, double px, double py, double pz,
     double e, double m = 0., double scaleIn = 0., double polIn = 9.) {
-    entry.push_back( Particle(id, status, mother1, mother2, daughter1,
-    daughter2, col, acol, px, py, pz, e, m, scaleIn, polIn) ); setEvtPtr();
+    auto entryIn = Particle(id, status, mother1, mother2, daughter1,
+    daughter2, col, acol, px, py, pz, e, m, scaleIn, polIn);
+    //fill_coll(entryIn);
+    entry.push_back( entryIn );
+    setEvtPtr();
     if (col > maxColTag) maxColTag = col;
     if (acol > maxColTag) maxColTag = acol;
     return entry.size() - 1;
@@ -482,8 +514,11 @@ public:
   int append(int id, int status, int mother1, int mother2, int daughter1,
     int daughter2, int col, int acol, Vec4 p, double m = 0.,
     double scaleIn = 0., double polIn = 9.) {
-    entry.push_back( Particle(id, status, mother1, mother2, daughter1,
-    daughter2, col, acol, p, m, scaleIn, polIn) ); setEvtPtr();
+    auto entryIn =  Particle(id, status, mother1, mother2, daughter1,
+    daughter2, col, acol, p, m, scaleIn, polIn) ;
+    //fill_coll(entryIn);
+    entry.push_back( entryIn);
+    setEvtPtr();
     if (col > maxColTag) maxColTag = col;
     if (acol > maxColTag) maxColTag = acol;
     return entry.size() - 1;
@@ -492,15 +527,23 @@ public:
   // Brief versions of append: no mothers and no daughters.
   int append(int id, int status, int col, int acol, double px, double py,
     double pz, double e, double m = 0., double scaleIn = 0.,
-    double polIn = 9.) { entry.push_back( Particle(id, status, 0, 0, 0, 0,
-    col, acol, px, py, pz, e, m, scaleIn, polIn) ); setEvtPtr();
+    double polIn = 9.) {
+    auto entryIn = Particle(id, status, 0, 0, 0, 0,
+    col, acol, px, py, pz, e, m, scaleIn, polIn);
+    //fill_coll(entryIn);
+    entry.push_back( entryIn );
+    setEvtPtr();
     if (col > maxColTag) maxColTag = col;
     if (acol > maxColTag) maxColTag = acol;
     return entry.size() - 1;
   }
   int append(int id, int status, int col, int acol, Vec4 p, double m = 0.,
-    double scaleIn = 0., double polIn = 9.) {entry.push_back( Particle(id,
-    status, 0, 0, 0, 0, col, acol, p, m, scaleIn, polIn) ); setEvtPtr();
+    double scaleIn = 0., double polIn = 9.) {
+      auto entryIn = Particle(id,
+    status, 0, 0, 0, 0, col, acol, p, m, scaleIn, polIn);
+    //fill_coll(entryIn);
+      entry.push_back( entryIn );
+    setEvtPtr();
     if (col > maxColTag) maxColTag = col;
     if (acol > maxColTag) maxColTag = acol;
     return entry.size() - 1;

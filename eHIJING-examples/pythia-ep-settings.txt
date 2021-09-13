@@ -1,6 +1,3 @@
-# Modified from Pythia Sample Program main36.cc,
-# which sets up eP collisions at HERA
-
 # random seed, seed=0 --> time-dependent seed
 Random:setSeed = on
 Random:seed = 0
@@ -16,26 +13,22 @@ Beams:eB = 27.6 # electron beam energy (+,0,0,-) [GeV]
 
 # Phasespace cut:
 # Minimum hard scale squared [GeV^2]
-PhaseSpace:Q2Min = 1
+PhaseSpace:Q2Min = 1.0
+PhaseSpace:mHatMin = 0
+PhaseSpace:pTHatMinDiverge = 0.5
 
 # >>>>>> Do not change the following without a good reason...
-PDF:lepton = off
+# PDF:lepton = on
+# PhotonParton:all = on
 
-PhaseSpace:mHatMin = 0 # this is important if you are at HEMES energy
+
+# WeakBosonExchange:all = on
 WeakBosonExchange:ff2ff(t:gmZ) = on
 WeakBosonExchange:ff2ff(t:W) = off
 
-
-SpaceShower:QCDshower = on
 SpaceShower:pTmaxMatch = 2
 SpaceShower:dipoleRecoil = off
 
-TimeShower:QCDshower = on
-TimeShower:interleave = off
-TimeShower:QEDshowerByL = off
-
-PartonLevel:Remnants = on
-Check:event = off
 HadronLevel:all = off
 HadronLevel:decay = off
 
@@ -47,4 +40,4 @@ PDF:useHardNPDFA = on
 
 # eHIJING Switch
 eHIJING:all = on
-eHIJING:Mode = 0
+eHIJING:Mode = 1

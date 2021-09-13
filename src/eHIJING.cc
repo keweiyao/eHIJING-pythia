@@ -65,6 +65,11 @@ double CHT_F2(double u){
     return - gsl_sf_Ci(u) + std::log(u) + std::sin(u)/u;
 }
 
+// integrate du (1-cos(1/u)) / u
+double inte_C(double u){
+    return gsl_sf_Ci(1./u) + std::log(u);
+}
+
 double FiniteZcorr(double a){
     return -1.76*std::pow(a, 0.966) * std::exp(-0.907*std::pow(a, 2.871));
 }
@@ -229,19 +234,22 @@ double MultipleCollision::compute_Rg(double TA, double Q2xB, double l2){
               * quad_1d(dfdlnq2, {std::log(l2), std::log(Q2xB)}, error);
   return res;
 }
-// Sample elastic collisio, without radiation
-void MultipleCollision::sample_all_qt2(int pid, double E, double L, double xB, double Q2,
-                             std::vector<double> & q2_list, std::vector<double> & t_list) {
+// Sample all elastic collisio, without radiation, ordered from high scale to low
+int MultipleCollision::sample_all_qt2(int pid, double E, double L, double xB, double Q2,
+                             std::vector<double> & q2_list, std::vector<double> & t_list,
+                             std::vector<double> & phi_list) {
     q2_list.clear();
     t_list.clear();
-    double q2max = Q2/xB; // WK:but shouldn't we only allow multiple scatterings to be softer than Q2?
+    phi_list.clear();
+    double q2max = Q2/xB; // WK: but shouldn't we only allow multiple scatterings to be softer than Q2?
     double TA = rho0*L;
     double CR = (pid==21)? CA : CF;
     double qs2 = Qs2(xB, Q2, TA);
     double tildeTA = Kfactor_*normG(q2max, qs2, powerG_, lambdaG_, avgxG_)*M_PI*CR*TA/dA;
     double qs2overCTA = qs2/tildeTA;
     double q2 = q2max;
-    while (q2 > mu2) {
+    double q2min = EHIJING::mu2/4.;
+    while (q2 > q2min) {
         // sample the next hard multiple collision
         double lnr = std::log(flat_gen(gen));
         if (q2 < qs2) {
@@ -261,11 +269,56 @@ void MultipleCollision::sample_all_qt2(int pid, double E, double L, double xB, d
             }
         }
         double xg = q2/q2max;
-        if (q2 > mu2 && flat_gen(gen) < std::pow(1.-xg, powerG_)) {
+        double t = flat_gen(gen)*L;
+        if (   q2>q2min
+            && flat_gen(gen) < std::pow(1.-xg, powerG_) // correct the distribution at large xg
+            && t > r0 // exclude the collision with the original nucleon from hard collision
+           ) {
             q2_list.push_back(q2);
-            t_list.push_back(flat_gen(gen)*L);
+            t_list.push_back(t);
+            phi_list.push_back(2.*M_PI*flat_gen(gen));
         }
     }
+    return q2_list.size();
+}
+
+// Sample exact one single collision; therefore, not a rate sampling!
+void MultipleCollision::sample_single_qt2(int pid, double E, double L, double xB, double Q2,
+                                         double & qx, double & qy, double & xg, double & tq,
+                                         double minimum_q2) {
+    double q2max = Q2/xB; // WK:but shouldn't we only allow multiple scatterings to be softer than Q2?
+    double TA = rho0*L;
+    double CR = (pid==21)? CA : CF;
+    double qs2 = Qs2(xB, Q2, TA);
+    double q2 = 0., phi = 0.;
+    double minimum_q2_over_Qs2 = minimum_q2 / qs2;
+    double maximum_q2_over_Qs2 = q2max / qs2;
+    if (minimum_q2 > qs2) {
+        double Ntot = (std::pow(minimum_q2_over_Qs2, lambdaG_-1)
+                     - std::pow(maximum_q2_over_Qs2, lambdaG_-1))/(1.-lambdaG_);
+        double r = flat_gen(gen);
+        q2 = qs2*std::pow(1./(std::pow(minimum_q2_over_Qs2, lambdaG_-1)
+                          - r*Ntot*(1.-lambdaG_)),
+                          1./(1.-lambdaG_));
+    }else{
+        double N1 = (1. - std::pow(minimum_q2_over_Qs2, lambdaG_))/lambdaG_;
+        double N2 = (1. - std::pow(maximum_q2_over_Qs2, lambdaG_-1))/(1.-lambdaG_);
+        double Ntot = N1 + N2;
+        double r = flat_gen(gen);
+        if (r<N1/Ntot) {
+            q2 = qs2*std::pow(Ntot * r * lambdaG_ + std::pow(minimum_q2, lambdaG_), 1./lambdaG_);
+        }else{
+            q2 = qs2*std::pow(1./(1. - (r*Ntot-N1)*(1.-lambdaG_)), 1./(1.-lambdaG_));
+        }
+    }
+    // step 2, sample phi2
+    phi = 2*M_PI*flat_gen(gen);
+    double q = std::sqrt(q2);
+    qx = q*std::cos(phi);
+    qy = q*std::sin(phi);
+    xg = q2/Q2*xB;
+    tq = L*flat_gen(gen);
+    return;
 }
 
 /////////// Class: eHIJING
@@ -299,7 +352,7 @@ void eHIJING::Tabulate(std::filesystem::path table_path){
         // the following routine will use the max number of hard ware concurrency of your computer
         // to parallel the computation of the table
         std::filesystem::path fname = table_path/std::filesystem::path("GHT.dat");
-        if (std::filesystem::exists(fname)) {
+        /*if (std::filesystem::exists(fname)) {
             std::cout << "Loading GHT Table" << std::endl;
             std::ifstream f(fname.c_str());
             int count = 0;
@@ -365,7 +418,7 @@ void eHIJING::Tabulate(std::filesystem::path table_path){
                 f << GHT_z_kt2_Table.get_with_linear_index(c) << " "
                    << GHT_kt2_Table.get_with_linear_index(c)   << std::endl;
             }
-        }
+        }*/
         std::cout << "... done" << std::endl;
     }
 }
@@ -432,6 +485,179 @@ double eHIJING::compute_GHT_kt2(double TA, double Q2xB, double kt2, double Lk2_2
 
 
 
+
+bool eHIJING::next_kt2_stochastic(double & kt2, int pid,
+                        double E,
+                        double kt2min,
+                        std::vector<double> qt2s,
+                        std::vector<double> ts) {
+    double CR = (pid==21)? CA : CF;
+    double CAoverCR = CA/CR;
+    double CR_2overb0 = CR*2.0/b0;
+    double zmin = std::min(.4/E, .4);
+    double zmax = 1. - zmin;
+    double logvac = std::log(zmax/zmin);
+    int Ncolls = ts.size();
+    double acceptance = 0.;
+
+    if (mode_ == 0){
+        while (acceptance<flat_gen(gen) && kt2>kt2min) {
+            double maxlogmed = 0.;
+            for (int i=0; i<Ncolls; i++){
+                double q2 = qt2s[i], t = ts[i];
+                double phasemax = inte_C((2*zmax*E)/(t*kt2min)) - inte_C((2*zmin*E)/(t*kt2));
+                maxlogmed += q2 * phasemax ;
+            }
+            maxlogmed *= 2. / kt2min * CAoverCR;
+            double Crad = CR_2overb0 * (logvac + maxlogmed);
+            double r = flat_gen(gen);
+            kt2 = mu2 * std::pow(kt2/mu2, std::pow(r, 1.0/Crad) );
+            double logmed = 0.;
+            for (int i=0; i<Ncolls; i++){
+                double q2 = qt2s[i], t = ts[i];
+
+                double phase = inte_C((2*zmax*E)/(t*kt2)) - inte_C((2*zmin*E)/(t*kt2));
+                logmed += q2 * phase;
+            }
+            logmed *= 2./kt2*CAoverCR;
+            acceptance = (logvac + logmed) / (logvac + maxlogmed);
+        }
+    } else {
+        // Genearlized formula
+        double maxdiffz = 1./zmin - 1./zmax + 2.*logvac;
+        while (acceptance<flat_gen(gen) && kt2>kt2min) {
+            double maxmedcoeff = 0.;
+            for (int i=0; i<Ncolls; i++){
+                double q2 = qt2s[i], t = ts[i];
+                maxmedcoeff += t*(kt2 + q2);
+            }
+            maxmedcoeff *= 2.*CAoverCR/E;
+            double Crad = CR_2overb0 * (logvac + maxmedcoeff);
+            double r = flat_gen(gen);
+            kt2 = mu2 * std::pow(kt2/mu2, std::pow(r, 1.0/Crad) );
+            // compute acceptance
+            double medcoeff = 0.;
+            for (int i=0; i<Ncolls; i++){
+                double q2 = qt2s[i], t = ts[i];
+                medcoeff += t*(kt2 + q2);
+            }
+            medcoeff *= 2.*CAoverCR/E;
+            acceptance = (logvac + medcoeff) / (logvac + maxmedcoeff);
+        }
+    }
+    return (kt2>kt2min);
+}
+
+double eHIJING::sample_z_stochastic(double & z, int pid,
+                        double E,
+                        double kt2,
+                        std::vector<double> qt2s,
+                        std::vector<double> ts) {
+    double CR = (pid==21)? CA : CF;
+    double zmin = std::min(.4/E, .4);
+    double zmax = 1. - zmin;
+    int Ncolls = ts.size();
+    double acceptance = 0.;
+    double weight = 1.0;
+    if (mode_==0){
+        while (acceptance<flat_gen(gen)) {
+            z = zmin*std::pow(zmax/zmin, flat_gen(gen));
+            double tauf = 2*z*(1.0-z)*E/kt2;
+            double w = 1.0, wmax = 1.0;
+            for (int i=0; i<Ncolls; i++){
+                double q2 = qt2s[i], t = ts[i];
+                w += 2.*q2/kt2 * CA / CR * (1.-cos(t/tauf));
+                wmax += 4.*q2/kt2 * CA / CR;
+            }
+            acceptance = w/wmax;
+        }
+    } else {
+        while (acceptance<flat_gen(gen)) {
+            double a = 0.;
+            for (int i=0; i<Ncolls; i++){
+                double q2 = qt2s[i], t = ts[i];
+                a += (kt2 +q2)*t;
+            }
+            a /= (2.*E);
+            // sample z ~ 1/z + a/[z^2(1-z)]
+            // two important scale
+            double z1 = a/(1.+a);
+            double z2 = (1.+a)/(1.+2*a);
+            // Now there are five cases:
+            double r = flat_gen(gen);
+            double acceptacne = 1.;
+            if (zmin<zmax && zmax<z1) {
+                double N = 3.*a*(1./zmin-1./zmax);
+                z = 1./(1./zmin - r*N/(3.*a));
+                acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/z/z);
+            }
+            if (zmin<z1 && z1<zmax && zmax<z2){
+                double N1 = 3.*a*(1./zmin-1./z1);
+                double N2 = 3.*(1-a)*std::log(zmax/z1);
+                double Ntot = N1 + N2;
+                double Pc = N1/Ntot;
+                if (r<Pc){
+                    z = 1./(1/zmin - r*Ntot/(3.*a));
+                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/z/z);
+                } else {
+                    z = z1*std::exp((r*Ntot - N1)/(3.*(1+a)));
+                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*(1.+a)/z);
+                }
+            }
+            if (z1<zmin && zmax <z2){
+                double N = 3.*(1.+a)*std::log(zmax/zmin);
+                z = zmin*std::exp(r*N/(3.*(1.+a)));
+                acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*(1.+a)/z);
+            }
+            if (zmin<z1 && z2<zmax){
+                double N1 = 3.*a*(1/zmin-1./z1);
+                double N2 = 3.*(1.+a)*std::log(z2/z1);
+                double N3 = 3.*a*std::log((1-z2)/(1.-zmax));
+                double Ntot = N1+N2+N3;
+                double Pc1 = N1/Ntot, Pc2 = (N1+N2)/Ntot;
+                if (r<Pc1){
+                    z = 1./(1/zmin - r*Ntot/(3.*a));
+                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/z/z);
+                } else if (r<Pc2){
+                    z = z1*std::exp((r*Ntot - N1)/(3.*(1+a)));
+                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*(1.+a)/z);
+                } else{
+                    z = 1. - (1-z2) * std::exp( - (r*Ntot - N1 - N2)/(3.*a) );
+                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/(1.-z));
+                }
+            }
+            if (z1<zmin && z2<zmax){
+                double N1 = 3.*(1.+a)*std::log(z2/zmin);
+                double N2 = 3.*a*std::log((1.-z2)/(1.-zmax));
+                double Ntot = N1 + N2;
+                double Pc = N1/Ntot;
+                if (r<Pc) {
+                    z = zmin*std::exp(r*Ntot/(3.*(1.+a)));
+                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*(1.+a)/z);
+                } else {
+                  z = 1. - (1-z2) * std::exp( - (r*Ntot - N1)/(3.*a) );
+                  acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/(1.-z));
+                }
+            }
+        }
+        // sample phi uniformly
+        double phi = flat_gen(gen)*2.*M_PI;
+        // compute the weight
+        double w = 1.0, wmax = 1.0;
+        for (int i=0; i<Ncolls; i++){
+            double q2 = qt2s[i], t = ts[i];
+            double kdotq = std::sqrt(kt2*q2)*std::cos(phi);
+            double kmq2 = kt2 + q2 - 2.*kdotq;
+            double tauf = 2.*z*(1.-z)*E/kmq2;
+            w += 2.*kdotq/kmq2 * (1.-std::cos(t/tauf));
+            wmax += (kt2+q2)*t/(2.*z*(1-z)*E);
+        }
+        weight = w/wmax;
+    }
+    return std::max(weight,0.);
+}
+
+
 // sampling
 bool eHIJING::next_kt2(double & kt2, int pid, double E, double L,
                        double kt2min, double xB, double Q20) {
@@ -494,7 +720,6 @@ bool eHIJING::next_kt2(double & kt2, int pid, double E, double L,
     }
     return (kt2>kt2min);
 }
-
 
 bool eHIJING::sample_z(double & z, int pid, double E, double L, double kt2, double xB, double Q20) {
     double TA = rho0*L;
@@ -570,7 +795,7 @@ bool InMediumFragmentation::next_radiation_CHT(int pid, double E, double L,
   }
   double TA = rho0*L;
   double CR = (pid==21)? CA : CF;
-  double alphas0 = alphas(kt2_max);
+  double alphas0 = alphas(std::sqrt(kt2_max*mu2));
   double qhat_g = MultipleCollision::qhatA(xB, Q20, std::max(TA, 1.0*5.076*rho0));
   double prefactor = alphas0*CR/M_PI * qhat_g*L*L/E
                   * ( 1./zmin-1./zmax
@@ -668,7 +893,7 @@ bool InMediumFragmentation::next_radiation_GHT(int pid, double E, double L,
   }
   double TA = rho0*L;
   double CR = (pid==21)? CA : CF;
-  double alphas0 = alphas(kt2_max);
+  double alphas0 = alphas(std::sqrt(kt2_max*mu2));
   double qhat_geff_max = 2*MultipleCollision::conditioned_qhat_gluon(
               kt2_min, std::max(TA, 1.0*5.076*rho0), xB, Q20);
 
@@ -751,9 +976,9 @@ bool InMediumFragmentation::next_radiation_GHT(int pid, double E, double L,
   }
   double kt2 = omegaL*(2.*z*(1.-z)*E)/L;
   double kt = std::sqrt(kt2);
-  if (kt2<kt2_min || kt2>kt2_max || kt > z*E || kt  > (1.-z)*E)  return false;
+  if (kt2<z*(1.-z)*kt2_min || kt2>kt2_max || kt > z*E || kt  > (1.-z)*E)  return false;
   acceptance =  MultipleCollision::conditioned_qhat_gluon(
-                kt2, std::max(TA, 1.0*5.076*rho0), xB, Q20) / qhat_geff_max;
+                kt2, std::max(TA, .2*5.076*rho0), xB, Q20) / qhat_geff_max;
   if (acceptance>1.) std::cout << "warn-Z " << acceptance << " " << kt2 << " " << kt2_min << std::endl;
   if (acceptance < flat_gen(gen))  return false;
   return true;
