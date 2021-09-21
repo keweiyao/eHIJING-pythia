@@ -14,7 +14,7 @@
 <parm name="eHIJING:ChargeNumber" default="82" min="0" max="82"> 
 </parm> 
 
-<parm name="eHIJING:Kfactor" default="1.0" min="0.25" max="4.0"> 
+<parm name="eHIJING:Kfactor" default="1.0" min="0.0"> 
 </parm> 
 
 <parm name="eHIJING:xG-n" default="4.0" min="1.0" max="10.0"> 

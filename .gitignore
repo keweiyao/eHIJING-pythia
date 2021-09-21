@@ -10,5 +10,8 @@ tmp/
 *.pdf
 *.png
 *.tar.gz
+*.zip
+*.a
+*.so
 cpp_interface/results*/
 cpp_interface/Tables/

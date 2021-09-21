@@ -100,7 +100,7 @@ bool trigger(Pythia & pythia) {
 
     // In Breit frame, where gamma ~ (0,0,0,-Q),
     double y     = (pProton * pGamma) / (pProton * peIn);
-    return (1.0<Q2) & (W2>4.) & (nu>4.) & (y<.85);
+    return (1.0<Q2);
 }
 
 template<typename T>
@@ -132,17 +132,17 @@ void output(Pythia & pythia, T & plist, ofstream & f){
          pbst.bstback(pCoM);
          double xF = dot3(pGamma2, pbst);
          double z = p.e()/nu;
-         if (xF<0) continue;
-         //if (z>z1) { z1 = z; c1 = p.charge();}
-         //else if (z>z2) { z2 = z; c2 = p.charge();}
-         auto prot = p.p();
-         prot.rot(0, phi);
-         prot.rot(theta, 0);
-         f << p.id() << " " << z << " " << prot.pT() << " " << nu << " " << Q2 << std::endl;
+         //if (xF<0) continue;
+         if (z>z1) { z1 = z; c1 = p.charge();}
+         else if (z>z2) { z2 = z; c2 = p.charge();}
+         //auto prot = p.p();
+         //prot.rot(0, phi);
+         //prot.rot(theta, 0);
+         //f << p.id() << " " << z << " " << prot.pT() << " " << nu << " " << Q2 << std::endl;
         }
     }
     // exclude +- pairs
-    //if (c1*c2>-.1) f << z1 << " " << z2 << std::endl;
+    if (c1*c2>-.1) f << z1 << " " << z2 << " " << Q2 << " " << nu << " " << pythia.info.sigmaGen() << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -160,37 +160,43 @@ int main(int argc, char *argv[]) {
   double pTmin = .5;
   double pT2min = std::pow(pTmin, 2);
 
-  int inuclei = 100000000
-              +   Z*10000
-              +   A*10;
-  hadronizer HZ;
-  EHIJING::NuclearGeometry  eHIJING_Geometry(A, Z);
-  // Initialize
-  Pythia pythia;        // Generator
-  Event& event = pythia.event; // Event record
-  pythia.readFile("pythia-ep-settings.txt"); // read settings
-  add_arg<double>(pythia, "TimeShower:pTmin", pTmin);
-  add_arg<int>(pythia, "eHIJING:Mode", mode);
-  add_arg<int>(pythia, "PDF:nPDFSetA", (A>2)?3:0);
-  add_arg<int>(pythia, "PDF:nPDFBeamA", inuclei);
-  add_arg<int>(pythia, "eHIJING:AtomicNumber", A);
-  add_arg<int>(pythia, "eHIJING:ChargeNumber", Z);
-  add_arg<double>(pythia, "eHIJING:Kfactor", (A>2)?K:K);
-  double alpha_fix = EHIJING::alphas(std::sqrt(pT2min*EHIJING::mu2));
-  double alphabar = alpha_fix * EHIJING::CA/M_PI;
-  pythia.init();
-  // output
   std::stringstream  ss;
   ss << header << "/" << Z << "-" << A << "-cutRA.dat";
   std::ofstream f(ss.str());
 
   std::stringstream  ss2;
   ss2 << header << "/" << Z << "-" << A << "-stat.dat";
-  //std::ofstream fstat(ss2.str());
+  std::ofstream fstat(ss2.str());
 
   std::random_device rd;  //Will be used to obtain a seed for the random number engine
   std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
   std::uniform_real_distribution<double> dist(0.,1.);
+
+  int inuclei = 100000000
+              +   Z*10000
+              +   A*10;
+  hadronizer HZ;
+  EHIJING::NuclearGeometry  eHIJING_Geometry(A, Z);
+  // Initialize
+  double Q2s[11]={1,2,3,4,5,6,8,10,20,40,100};
+  for (int iQ=0; iQ<10;iQ++){
+  Pythia pythia;        // Generator
+  Event& event = pythia.event; // Event record
+  pythia.readFile("pythia-ep-settings.txt"); // read settings
+  add_arg<double>(pythia, "TimeShower:pTmin", pTmin);
+  add_arg<int>(pythia, "eHIJING:Mode", mode);
+  add_arg<int>(pythia, "PDF:nPDFSetA", (A>14)?3:0);
+  add_arg<int>(pythia, "PDF:nPDFBeamA", inuclei);
+  add_arg<int>(pythia, "eHIJING:AtomicNumber", A);
+  add_arg<int>(pythia, "eHIJING:ChargeNumber", Z);
+  add_arg<double>(pythia, "eHIJING:Kfactor", K);
+  add_arg<double>(pythia, "PhaseSpace:Q2Min", Q2s[iQ]);
+  add_arg<double>(pythia, "PhaseSpace:Q2Min", Q2s[iQ+1]);
+  double alpha_fix = EHIJING::alphas(pT2min);
+  double alphabar = alpha_fix * EHIJING::CA/M_PI;
+  pythia.init();
+  // output
+
   // Begin event loop.
   int Ntriggered = 0;
   int count = 0, failed=0;
@@ -234,7 +240,8 @@ int main(int argc, char *argv[]) {
                  vz = p.pz()/p.e();
           double L = eHIJING_Geometry.compute_L(event.Rx(), event.Ry(), event.Rz(),
                                             vx, vy, vz);
-
+          double tau1 = 2.*p.e()/std::pow(p.scale(),2);
+          //if (p.id()==21) fstat << 111 << " " << xB << " " << Q20 << " " << pGamma.e() << " " << tau1 << " " << std::pow(p.scale(),2) << " " << 0 <<" "<< 0 << " " << p.e() << " " << L << std::endl;
           int Ncolls = ts.size();
           if (Ncolls==0) {
               //if (p.id()==hardP.id())
@@ -243,8 +250,9 @@ int main(int argc, char *argv[]) {
           }
           double sumq2 = 0.;
           for (auto & q2 : qt2s) sumq2 += q2;
+          if (mode==0 && sumq2<1e-9) continue;
           double taufmax = 2*p.e()/EHIJING::mu2;
-          double tauf = 1e-3;
+          double tauf = 1./std::sqrt(Q20);
           double acceptance = 0;
           double z, kt2, phik, dphiqk;
 
@@ -253,7 +261,7 @@ int main(int argc, char *argv[]) {
           recoil_remnants.clear();
 
           while(tauf < taufmax && p.e()>2*emin){
-              double zmin = emin / p.e();
+              double zmin = std::min(emin / p.e(), .4);
               double zmax = 1.-zmin;
               if (zmax<zmin) break;
               double maxlogz =  std::log(zmax/zmin);
@@ -312,6 +320,14 @@ int main(int argc, char *argv[]) {
                       }
                   }
                   kt2 = 2*(1.-z)*z*p.e()/tauf;
+                  // reject cases where qt2>kt2 for mode=0
+                  double Num=0., Den = 0.;
+                  for (int j=0; j<Ncolls; j++) {
+                      double q2 = qt2s[j], t = ts[j];
+                      if (kt2>q2) Num += q2*(1.-std::cos(t/tauf));
+                      Den += q2*(1.-std::cos(t/tauf));
+                  }
+                  if (Num/Den < dist(gen)) continue;
               }
               else {
                   bool ok=false;
@@ -330,6 +346,9 @@ int main(int argc, char *argv[]) {
                       acceptance = num / Ncolls;
                   }
               }
+
+
+              // correct for splitting function
               if (p.id()==21 && (1+std::pow(1.-z,3))/2.<dist(gen) ) continue;
               if (p.id()!=21 && (1+std::pow(1.-z,2))/2.<dist(gen) ) continue;
 
@@ -392,7 +411,7 @@ int main(int argc, char *argv[]) {
               kmu.e(std::sqrt(kmu.pAbs2()));
 
               taufmax = 2.*p.e()/EHIJING::mu2;
-
+              //fstat << 222 << " " << xB << " " << Q20 << " " << pGamma.e() << " " << tauf << " " << lt2 << " " << kt2 << " " << z << " " << kmu.e() << " " << L << std::endl;
               // update the color if it is a hard gluon
               // first, the spliting process
               int k_col, k_acol;
@@ -674,6 +693,7 @@ int main(int argc, char *argv[]) {
     }
     std::cout << "TriggerRate = " << Ntriggered*1./count << std::endl;
     std::cout << "FailedRate = " << failed*1./count<< std::endl;
+  }
     // Done.
     return 0;
 }

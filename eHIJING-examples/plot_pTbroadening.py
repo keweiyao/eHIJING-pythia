@@ -160,7 +160,7 @@ entry = ['id','z','pT','nu','Q2']
 rerun = True
 outfile = "Production-Frag.h5"
 if rerun:
-    f = h5py.File(outfile,'a')
+    f = h5py.File(outfile,'w')
     for group in Models:
         if group in f:
             del f[group]
@@ -188,7 +188,7 @@ ssid = {211:'\pi^+', -211:'\pi^-', 111:'\pi^0',
    2212:'p',  -2212:"\\bar{p}"}
 
 def DpT2_x(iid):
-    fig, axes = plt.subplots(1,4,figsize=(textwidth*1.1,.4*textwidth), sharey=True,sharex=True)
+    fig, axes = plt.subplots(1,4,figsize=(textwidth,.35*textwidth), sharey=True,sharex=True)
     for ax,N,_,Z,A in zip(axes,*NCZA):
         x,y,ystat,ysys =  np.loadtxt("pTbroadening-ExpData/pT2_vs_x/e{}-{}.dat".format(N,sid[iid])).T
         ax.errorbar(x,y,yerr=ystat,fmt='.', color='k',label=r'HERMES')
@@ -252,11 +252,11 @@ def DpT2_x(iid):
             ax.set_xlabel(r"$x_B$")
             ax.semilogx()
     set_prelim(ax)
-    plt.subplots_adjust(wspace=0, left=.1, right=.99, bottom=.25, top=.9)
+    plt.subplots_adjust(wspace=0, left=.12, right=.97, bottom=.2, top=.88)
 
 
 def DpT2_z(iid):
-    fig, axes = plt.subplots(1,4,figsize=(textwidth*1.1,.4*textwidth), sharey=True,sharex=True)
+    fig, axes = plt.subplots(1,4,figsize=(textwidth,.35*textwidth), sharey=True,sharex=True)
     for ax,N,_,Z,A in zip(axes,*NCZA):
         x,y,ystat,ysys =  np.loadtxt("pTbroadening-ExpData/pT2_vs_z/e{}-{}.dat".format(N,sid[iid])).T
         ax.errorbar(x,y,yerr=ystat,fmt='.', color='k',label=r'HERMES')
@@ -276,7 +276,7 @@ def DpT2_z(iid):
             pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
             pT2 = pT**2
             xB = Q2/2./0.938/nu
-            cut = (pid==iid) & (nu<23)
+            cut = (pid==iid)
             binv = z[cut]
             wv = pT2[cut]
             X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
@@ -293,7 +293,7 @@ def DpT2_z(iid):
                 pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
                 pT2 = pT**2
                 xB = Q2/2./nu/.938
-                cut = (pid==iid) & (nu<23)
+                cut = (pid==iid)
                 binv = z[cut]
                 wv = pT2[cut]
                 X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
@@ -317,15 +317,14 @@ def DpT2_z(iid):
                 ax.set_ylabel(r"$\Delta\langle p_T^2\rangle$ [GeV${}^2$]" if not scaled \
                          else r"$\Delta\langle p_T^2\rangle / K$")
             ax.set_title(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]))
-            ax.set_ylim(-.02,.1)
+            ax.set_ylim(-.02,.08)
             ax.set_xlabel(r"$z_h$")
     set_prelim(ax)
-    plt.subplots_adjust(wspace=0, left=.1, right=.99, bottom=.25, top=.9)
-
+    plt.subplots_adjust(wspace=0, left=.12, right=.97, bottom=.2, top=.88)
 
 
 def DpT2_nu(iid):
-    fig, axes = plt.subplots(1,4,figsize=(textwidth*1.1,.4*textwidth), sharey=True,sharex=True)
+    fig, axes = plt.subplots(1,4,figsize=(textwidth*1,.35*textwidth), sharey=True,sharex=True)
     for ax,N,_,Z,A in zip(axes,*NCZA):
         x,y,ystat,ysys =  np.loadtxt("pTbroadening-ExpData/pT2_vs_nu/e{}-{}.dat".format(N,sid[iid])).T
         ax.errorbar(x,y,yerr=ystat,fmt='.', color='k',label=r'HERMES')
@@ -344,7 +343,7 @@ def DpT2_nu(iid):
             pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
             pT2 = pT**2
             xB = Q2/2./0.938/nu
-            cut = (pid==iid) & (nu<23) & (z>.2)
+            cut = (pid==iid) & (z>.2)
             binv = nu[cut]
             wv = pT2[cut]
             X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
@@ -361,7 +360,7 @@ def DpT2_nu(iid):
                 pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
                 pT2 = pT**2
                 xB = Q2/2./nu/.938
-                cut = (pid==iid) & (nu<23) & (z>.2)
+                cut = (pid==iid) & (z>.2)
                 binv = nu[cut]
                 wv = pT2[cut]
                 X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
@@ -385,13 +384,13 @@ def DpT2_nu(iid):
                 ax.set_ylabel(r"$\Delta\langle p_T^2\rangle$ [GeV${}^2$]" if not scaled \
                          else r"$\Delta\langle p_T^2\rangle / K$")
             ax.set_title(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]))
-            ax.set_ylim(-.02,.1)
+            ax.set_ylim(-.02,.06)
             ax.set_xlabel(r"$\nu$ [GeV]")
     set_prelim(ax)
-    plt.subplots_adjust(wspace=0, left=.1, right=.99, bottom=.25, top=.9)
+    plt.subplots_adjust(wspace=0, left=.12, right=.97, bottom=.2, top=.88)
 
 def DpT2_Q2(iid):
-    fig, axes = plt.subplots(1,4,figsize=(textwidth*1.1,.4*textwidth), sharey=True,sharex=True)
+    fig, axes = plt.subplots(1,4,figsize=(textwidth*1,.35*textwidth), sharey=True,sharex=True)
     for ax,N,_,Z,A in zip(axes,*NCZA):
         x,y,ystat,ysys =  np.loadtxt("pTbroadening-ExpData/pT2_vs_Q2/e{}-{}.dat".format(N,sid[iid])).T
         ax.errorbar(x,y,yerr=ystat,fmt='.', color='k',label=r'HERMES')
@@ -410,7 +409,7 @@ def DpT2_Q2(iid):
             pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
             pT2 = pT**2
             xB = Q2/2./0.938/nu
-            cut = (pid==iid) & (nu<23) & (z>.2)
+            cut = (pid==iid) & (z>.2)
             binv = Q2[cut]
             wv = pT2[cut]
             X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
@@ -427,7 +426,7 @@ def DpT2_Q2(iid):
                 pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
                 pT2 = pT**2
                 xB = Q2/2./nu/.938
-                cut = (pid==iid) & (nu<23) & (z>.2)
+                cut = (pid==iid) & (z>.2)
                 binv = Q2[cut]
                 wv = pT2[cut]
                 X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
@@ -451,15 +450,14 @@ def DpT2_Q2(iid):
                 ax.set_ylabel(r"$\Delta\langle p_T^2\rangle$ [GeV${}^2$]" if not scaled \
                          else r"$\Delta\langle p_T^2\rangle / K$")
             ax.set_title(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]))
-            ax.set_ylim(-.02,.1)
+            ax.set_ylim(-.02,.08)
             ax.set_xlabel(r"$Q^2$ [GeV${}^2$]")
             ax.semilogx()
     set_prelim(ax)
-    plt.subplots_adjust(wspace=0, left=.1, right=.99, bottom=.25, top=.9)
-
+    plt.subplots_adjust(wspace=0, left=.12, right=.97, bottom=.2, top=.88)
 
 def RA_z(iid):
-    fig, axes = plt.subplots(1,4,figsize=(textwidth*1.1,.4*textwidth), sharey=True,sharex=True)
+    fig, axes = plt.subplots(1,4,figsize=(textwidth,.35*textwidth), sharey=True,sharex=True)
     for ax,N,_,Z,A in zip(axes,*NCZA):
         x,xl,xh,y,ystat,_,ysys,_ = \
             np.loadtxt("Exp/HERMES/SIDIS/RA_z/e{}-{}.dat".format(N,sid[iid]),
@@ -500,11 +498,11 @@ def RA_z(iid):
             ax.set_ylim(.2,1.3)
             ax.set_xlabel(r"$z_h$")
     set_prelim(ax)
-    plt.subplots_adjust(wspace=0, left=.1, right=.99, bottom=.25, top=.9)
+    plt.subplots_adjust(wspace=0, left=.08, right=.99, bottom=.2, top=.88)
 
 
 def RA_pT(iid):
-    fig, axes = plt.subplots(1,4,figsize=(textwidth*1.1,.4*textwidth), sharey=True,sharex=True)
+    fig, axes = plt.subplots(1,4,figsize=(textwidth,.35*textwidth), sharey=True,sharex=True)
     for ax,N,_,Z,A in zip(axes,*NCZA):
         x,xl,xh,y,ystat,_,ysys,_ = \
             np.loadtxt("Exp/HERMES/SIDIS/RA_pT2/e{}-{}.dat".format(N,sid[iid]),
@@ -540,14 +538,15 @@ def RA_pT(iid):
             if ax.is_first_col():
                 ax.legend(loc='best')
                 ax.set_ylabel(r"$R_{{A}}$")
-    ax.set_xlim(0,2.2)
-    ax.set_ylim(.5,2.0)
-    ax.set_xlabel(r"$p_T^2$ [GeV${}^2$]")
+            ax.set_title(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]))
+            ax.set_xlim(0,2.2)
+            ax.set_ylim(.5,2.0)
+            ax.set_xlabel(r"$p_T^2$ [GeV${}^2$]")
     set_prelim(ax)
-    plt.subplots_adjust(wspace=0, left=.1, right=.99, bottom=.25, top=.9)
+    plt.subplots_adjust(wspace=0, left=.08, right=.99, bottom=.2, top=.88)
 
 def RA_nu(iid):
-    fig, axes = plt.subplots(1,4,figsize=(textwidth*1.1,.4*textwidth), sharey=True,sharex=True)
+    fig, axes = plt.subplots(1,4,figsize=(textwidth,.35*textwidth), sharey=True,sharex=True)
     for ax,N,_,Z,A in zip(axes,*NCZA):
         x,xl,xh,y,ystat,_,ysys,_ = \
             np.loadtxt("Exp/HERMES/SIDIS/RA_nu/e{}-{}.dat".format(N,sid[iid]),
@@ -583,16 +582,17 @@ def RA_nu(iid):
             if ax.is_first_col():
                 ax.legend(loc='best')
                 ax.set_ylabel(r"$R_{{A}}$")
-    ax.set_xlim(0,25)
-    ax.set_ylim(.2,1.4)
-    ax.set_xlabel(r"$\nu$ [GeV]")
+            ax.set_title(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]))
+            ax.set_xlim(0,25)
+            ax.set_ylim(.2,1.4)
+            ax.set_xlabel(r"$\nu$ [GeV]")
     set_prelim(ax)
-    plt.subplots_adjust(wspace=0, left=.1, right=.99, bottom=.25, top=.9)
+    plt.subplots_adjust(wspace=0, left=.08, right=.99, bottom=.2, top=.88)
 
 
 
 def RA_Q2(iid):
-    fig, axes = plt.subplots(1,4,figsize=(textwidth*1.1,.4*textwidth), sharey=True,sharex=True)
+    fig, axes = plt.subplots(1,4,figsize=(textwidth, .35*textwidth), sharey=True,sharex=True)
     for ax,N,_,Z,A in zip(axes,*NCZA):
         x,xl,xh,y,ystat,_,ysys,_ = \
             np.loadtxt("Exp/HERMES/SIDIS/RA_Q2/e{}-{}.dat".format(N,sid[iid]),
@@ -617,7 +617,7 @@ def RA_Q2(iid):
             YK1 = []
             for K in ModelK:
                 pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
-                cut = ( pid==iid )  & (z>.2)
+                cut = ( pid==iid )  & (z>.2) & (np.logical_not(np.isnan(z)))
                 Y = np.histogram(Q2[cut],bins=bins)[0]/db
                 YK1.append(Y)
 
@@ -628,19 +628,21 @@ def RA_Q2(iid):
             if ax.is_first_col():
                 ax.legend(loc='best')
                 ax.set_ylabel(r"$R_{{A}}$")
-    ax.set_xlim(0,16)
-    ax.set_ylim(.2,1.4)
-    ax.set_xlabel(r"$Q^2$ [GeV [${}^2$]]")
+            ax.set_title(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]))
+            ax.set_xlim(0,16)
+            ax.set_ylim(.2,1.4)
+            ax.set_xlabel(r"$Q^2$ [GeV [${}^2$]]")
     set_prelim(ax)
-    plt.subplots_adjust(wspace=0, left=.1, right=.99, bottom=.25, top=.9)
-
-
+    plt.subplots_adjust(wspace=0, left=.08, right=.99, bottom=.2, top=.88)
 
 @plot
 def Flavor_RA():
-    fig, axes = plt.subplots(2,3,figsize=(textwidth*.8,.6*textwidth), sharey=True,sharex=True)
+    fig, axes = plt.subplots(3,2,figsize=(textwidth*.6,.7*textwidth), sharex=True)
     axes = axes.flatten()
-    for ax, iid in zip(axes, [211,321,2212,111, -321, -2212]):
+    ylims = [(.3,1.2),(.3,1.2),(.3,1.3),(.3,1.3),(0,1.4),(0,1.4)]
+    for ax, iid, ylim in zip(axes, [211,111,321,-321,2212,-2212],
+                             ylims):
+        ax.set_ylim(*ylim)
         N,_,Z,A = [it[-1] for it in NCZA]
         x,xl,xh,y,ystat,_,ysys,_ = \
             np.loadtxt("Exp/HERMES/SIDIS/RA_z/e{}-{}.dat".format(N,sid[iid]),
@@ -653,35 +655,38 @@ def Flavor_RA():
                             edgecolor='k',facecolor='none')
         bins = np.array(list(xl)+[xh[-1]])
         db = bins[1:]-bins[:-1]
+        print(db)
         N = 'Xe'
         for model, color, label in zip(Models, ModelColors, labels):
-            YK = []
+            YK1 = []
             for K in ModelK:
                 pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-                cut = (pid==iid) & (nu>6)
+                cut = (pid==iid) & (nu>6)  & (np.logical_not(np.isnan(z)))
                 Y0 = np.histogram(z[cut],bins=bins)[0]/db
                 pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()]
                             for it in entry]
-                cut = ( pid==iid ) & (nu>6)
+                cut = ( pid==iid ) & (nu>6)  & (np.logical_not(np.isnan(z)))
                 Y = np.histogram(z[cut],bins=bins)[0]/db
                 Y = np.array(Y)/Y0
-                YK.append(Y)
-            ax.fill_between(x, YK1[0]/YK0[0], YK1[2]/YK0[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
-            ax.plot(x, YK1[1]/YK0[1], color=color)
-
-            ax.set_xlim(.1,1.1)
+                YK1.append(Y)
+            ax.fill_between(x, YK1[0], YK1[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
+            ax.plot(x, YK1[1], color=color)
+            if ax.is_last_col():
+                ax.set_yticks([])
+            ax.set_xlim(.05,1.15)
+            ax.set_xticks([0.2,0.4,.6,.8,1.])
             ax.plot([.0,1.5],[1,1],'k-',lw=.3)
             if ax.is_first_col():
                 ax.set_ylabel(r"$R_{{A}}$")
             ax.annotate(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]),xy=(.25,.86),xycoords="axes fraction")
-            ax.set_ylim(0,1.25)
+
             if ax.is_last_row():
                 ax.set_xlabel(r"$z_h$")
-    axes[0].legend(loc='lower left')
-    set_prelim(ax, xy=(.2,.1))
+    axes[4].legend(loc='lower left')
+    set_prelim(ax, xy=(.1,.05))
 
     #set_tight(fig)
-    plt.subplots_adjust(wspace=0, hspace=0, top=.99, right=.99, left=.1)
+    plt.subplots_adjust(wspace=0, hspace=0, top=.99, right=.98, left=.15,bottom=.1)
 
 
 @plot
@@ -717,8 +722,9 @@ def zdiff_RApT():
                 Y = np.histogram(pT[cut]**2,bins=bins)[0]/db
                 Y = np.array(Y)/Y0
                 YK.append(Y)
-            ax.fill_between(x, YK1[0]/YK0[0], YK1[2]/YK0[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
-            ax.plot(x, YK1[1]/YK0[1], color=color)
+
+            ax.fill_between(x, YK[0], YK[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
+            ax.plot(x, YK[1], color=color)
             ax.set_xlim(0,1.9)
             ax.plot([.0,2],[1,1],'k-',lw=.3)
             if ax.is_first_col():
@@ -864,9 +870,9 @@ def DpT2nu_pim():
 @plot
 def DpT2nu_Kp():
     DpT2_nu(321)
-
-
 """
+
+
 
 if __name__ == '__main__':
     import argparse

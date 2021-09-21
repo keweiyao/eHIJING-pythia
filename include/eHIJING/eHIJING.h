@@ -219,44 +219,13 @@ private:
     std::random_device rd;
     std::mt19937 gen;
     std::uniform_real_distribution<double> flat_gen;
-    // table for the Qs2, and generalized Higher-twist / GLV
-    table_nd GHT_z_kt2_Table, GHT_kt2_Table;
-    // compute the induced term in generalized HT:
-    // a): this one computes F(z, kt2) in terms of a table as function of TA, Q2/x, kt2, L/tauf=L*kt^2/(2z(1-z)E)
-    //     where F is dP/dz/dkt2 = alphas*CR*P(z)/(2*pi) * 1/kt2 * (1 + F(z, kt2))
-    //     and save F*kt2/Qs2 to the table
-    double compute_GHT_z_kt2(double TA, double Q2xB, double kt2, double Ltauf, double Qs2);
-    // a): this one computes F(kt2) in terms of a table as function of TA, Q2/x, kt2, L/tauf=L*kt^2/(2E)
-    //     where F is dP/dz/dkt2 = alphas*CR/pi * 1/kt2 * (ln(zmax/zmin) + F(kt2; zmax, zmin))
-    //     and save F*kt2/Qs2 to the table
-    double compute_GHT_kt2(double TA, double Q2xB, double kt2, double Ltauf, double Qs2);
+    table_nd GHT_Angular_Table;
+    double compute_GHT_Angular_Table(double X, double Y);
 public:
     // constructor, given mode, the K factor, powerG, lambdaG, and xG
     eHIJING(int mode, double K, double pG, double lG, double xG);
     // Tabulate (if nessesary) genralized HT table
     void Tabulate(std::filesystem::path table_path);
-    // interpolate F(z, kt2)
-    double induced_dFdkt2(double x, double Q2, double L, double E, double kt2){
-        double TA = rho0*L;
-        double Q2x = Q2/x;
-        double Lkt2_over_2E = L*kt2/2/E;
-        if (kt2>Q2x) return 0.;
-        return Kfactor_ * MultipleCollision::Qs2(Q2x, TA)/kt2
-             * GHT_kt2_Table.interpolate({TA, std::log(Q2x), std::log(kt2), std::log(5+Lkt2_over_2E)});
-    }
-    // interpolate F(kt2)
-    double induced_dFdkt2dz(double x, double Q2, double L, double E, double kt2, double z){
-        double TA = rho0*L;
-        double Q2x = Q2/x;
-        double LoverTauf = L*kt2/(2*(1.0-z)*z*E);
-        if (kt2>Q2x) return 0.;
-        return Kfactor_ * MultipleCollision::Qs2(Q2x, TA)/kt2
-             * GHT_z_kt2_Table.interpolate({TA, std::log(Q2x), std::log(kt2), std::log(5+LoverTauf)});
-    }
-    // Main routinue for sampling the next kt2, if the returned status is false,
-    // the splitting should be reject and only keep the evolution in kt2
-    bool next_kt2(double & kt2, int pid, double E, double L,
-                       double kt2min, double xB, double Q20);
     bool next_kt2_stochastic(double & kt2, int pid,
                                      double E,     double kt2min,
                                      std::vector<double> qt2s,
@@ -265,10 +234,8 @@ public:
                            double E,
                            double kt2,
                            std::vector<double> qt2s,
-                           std::vector<double> ts);
-    // Main routinue for sampling the z, if the returned status is false,
-    // the splitting should be reject and only keep the evolution in kt2
-    bool sample_z(double & z, int pid, double E, double L, double kt2, double xB, double Q20);
+                           std::vector<double> ts,
+                           std::vector<double> phis);
 };
 
 

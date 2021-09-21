@@ -106,7 +106,7 @@ void TimeShower::init( BeamParticle* beamAPtrIn,
 
   eHIJING_Geometry = new EHIJING::NuclearGeometry(AtomicNumber, ChargeNumber);
   if (eHIJING){
-      std::cout << "init EHIJING<<" << std::endl;
+      std::cout << "init EHIJING << K = "<< eHIJING_Kfactor << std::endl;
       eHIJING_Gen = new EHIJING::eHIJING(eHIJING_mode,
                                          eHIJING_Kfactor,
                                          settingsPtr->parm("eHIJING:xG-n"),
@@ -118,7 +118,7 @@ void TimeShower::init( BeamParticle* beamAPtrIn,
                                         settingsPtr->parm("eHIJING:xG-lambda"),
                                         settingsPtr->parm("eHIJING:xG-avgx"));
       Coll->Tabulate(eHIJING_table);
-      std::cout << "Done<<" << std::endl;
+      std::cout << "Done <<" << std::endl;
   }
 
   // If SpaceShower does dipole recoil then TimeShower must adjust.
@@ -2235,14 +2235,11 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
                                  pow(rndmPtr->flat(), b0 / emitCoefTot) );
       }
       else {
-        //bool status = eHIJING_Gen->next_kt2(dip.pT2, p.idAbs(), std::max(pinA.e(),1.), L, pT2min_in_A, x, Q2);
-//std::cout << "A>>";
         bool status =  eHIJING_Gen->next_kt2_stochastic(
                         dip.pT2, p.idAbs(),
                         std::max(pinA.e(),1.), pT2min_in_A,
                         p.coll_qt2s(), p.coll_ts()
                       );
-                      //std::cout << "B<<";
       }
        // WK <<<
     } else {
@@ -2279,12 +2276,10 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
             dip.z = 1. - zMinAbs * pow( 1. / zMinAbs - 1., rndmPtr->flat() );
           }
           else{
-            //std::cout << "C<<";
             double zg;
             eHIJING_weight = eHIJING_Gen->sample_z_stochastic(zg, p.idAbs(), std::max(pinA.e(),1.),
-                                  dip.pT2, p.coll_qt2s(), p.coll_phis());
+                                  dip.pT2, p.coll_qt2s(), p.coll_ts(), p.coll_phis());
             dip.z = 1. - zg;
-            //std::cout << "D<<";
           }
         } else {
             dip.z = zMinAbs + (1. - 2. * zMinAbs) * rndmPtr->flat();
@@ -2425,9 +2420,9 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
             // Optional dampening of large pT values in hard system.
             if (dopTdamp && dip.system == 0 && dip.MEtype == 0)
                 wt *= pT2damp / (dip.pT2 + pT2damp);*/
+            wt *= eHIJING_weight;
         }
     }
-
     // If doing uncertainty variations, postpone accept/reject to branch().
     if (wt > 0. && dip.pT2 > pT2min_in_A && doUncertaintiesNow) {
         dip.pAccept = wt;
@@ -2435,7 +2430,7 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
     }
   // Iterate until acceptable pT (or have fallen below pTmin).
   //std::cout << "eHIJING_weight = " << eHIJING_weight << std::endl;
-} while (wt*eHIJING_weight < rndmPtr->flat());
+} while (wt < rndmPtr->flat());
 //std::cout << endl;
 //std::cout << "rad step 3 " << dip.z << " " << dip.pT2 << " " << wt << std::endl;
 

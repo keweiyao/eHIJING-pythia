@@ -15,11 +15,12 @@ from scipy.interpolate import interp1d, interp2d
 from matplotlib.gridspec import GridSpec
 from scipy.integrate import quad
 import matplotlib.gridspec as gridspec
+
 fontsmall, fontnormal, fontlarge = 4.5, 6, 7
 offblack = '#262626'
 aspect = 1/1.618
 resolution = 72.27
-textwidth = 200/resolution
+textwidth = 270/resolution
 textheight = 200/resolution
 fullwidth = 300/resolution
 fullheight = 200/resolution
@@ -74,10 +75,8 @@ plt.rcParams.update({
 cm1, cm2 = plt.cm.Blues(.8), plt.cm.Reds(.8)
 cb,co,cg,cr,ck = plt.cm.Blues(.6), \
     plt.cm.Oranges(.6), plt.cm.Greens(.6), plt.cm.Reds(.6),\
-    plt.cm.copper(.1)
-offblack = '#262626'
+    '.5'
 gray = '0.8'
-
 
 plotdir = Path('plots')
 plotdir.mkdir(exist_ok=True)
@@ -205,30 +204,39 @@ def AvgKinematics(xname):
     set_tight(fig,pad=0.4)
 
 @plot
-def dihadron_fig():
-    fig, axes = plt.subplots(1,3,figsize=(textwidth,textwidth*.45), sharex=True,sharey=True)
+def dihadron_figS20():
+    fig, axes = plt.subplots(1,3,figsize=(.8*textwidth,textwidth*.35), sharex=True,sharey=True)
     # exp:
     for Z, A, name, ax in zip([7,36,54],[14,84,131],['N','Kr','Xe'], axes):
         _, _, X, Y, Ystat = np.loadtxt("Exp/HERMES/Dihadron/R12_{}.dat".format(name)).T
         ax.errorbar(X,Y,yerr=Ystat,fmt='k.', label="HERMES")
     # model:
-    b = np.linspace(0, .5, 7)
+    b = np.array([.0,.05,.075,.125,.15,.2,.3,.4,.5])
     x = (b[:-1]+b[1:])/2.
     dx = b[1:]-b[:-1]
     Ks = ['0d5','1','2']
+    nu0, nu1 = 0,2000
+    Q20, Q21 = 0,2000
+    x0, x1 = 0,1
     for model,color,label in zip(['Generalized','Collinear'],[cr,cb],['Gen.','H-T']):
         YK0 = []
         for K in Ks:
-            z1, z2 = np.loadtxt("Run/Production/Dihadron/{}/{}/1-2-cutRA.dat".format(model,K)).T
-            dN0, _ = np.histogram(z2[z1>.5], bins=b)
-            N0 = np.sum(z1>.5)
+            z1, z2, Q2, nu, w = np.loadtxt("Run/Production/Dihadron-20/{}/{}/1-2-cutRA.dat".format(model,K)).T
+            xB = Q2/2./0.938/nu
+            cut = (z1>.5) & (nu>nu0)&(nu<nu1)& (Q2>Q20)&(Q2<Q21) &\
+                  (x0<xB) & (xB<x1)
+            dN0, _ = np.histogram(z2[cut], weights=w[cut], bins=b)
+            N0 = np.sum(w[cut])
             YK0.append(dN0/N0)
         for Z, A, name, ax in zip([7,36,54],[14,84,131],['N','Kr','Xe'], axes):
             YK1 = []
             for K in Ks:
-                z1, z2 = np.loadtxt("Run/Production/Dihadron/{}/{}/{}-{}-cutRA.dat".format(model,K,Z,A)).T
-                dN0, _ = np.histogram(z2[z1>.5], bins=b)
-                N0 = np.sum(z1>.5)
+                z1, z2, Q2, nu, w = np.loadtxt("Run/Production/Dihadron-20/{}/{}/{}-{}-cutRA.dat".format(model,K,Z,A)).T
+                xB = Q2/2./0.938/nu
+                cut = (z1>.5) & (nu>nu0)&(nu<nu1)& (Q2>Q20)&(Q2<Q21) &\
+                  (x0<xB) & (xB<x1)
+                dN0, _ = np.histogram(z2[cut], weights=w[cut], bins=b)
+                N0 = np.sum(w[cut])
                 YK1.append(dN0/N0)
             ax.fill_between(x, YK1[0]/YK0[0], YK1[2]/YK0[2], color=color, label=label, alpha=.7)
             ax.plot(x, YK1[1]/YK0[1], color=color)
@@ -236,11 +244,121 @@ def dihadron_fig():
             if ax.is_first_col():
                 ax.set_ylabel(r"$R_{2h}(z_2)$")
             ax.plot([0,.5], [1,1], 'k-', lw=.5)
+            ax.set_title(r"$e+{{\rm {:s}}}\rightarrow h+\cdots$".format(name))
     ax.set_xlim(0,.5)
-    ax.set_ylim(0.7,1.4)
+    ax.set_ylim(0.5,1.4)
     axes[0].legend()
-    ax.annotate(r"$z_1>0.5$"+"\n"+"Excluding $+-$", xy=(.25,.7), xycoords="axes fraction")
+    ax.annotate(r"$z_1>0.5$"+"\n"+r"Excluding $\{+,-\}$", xy=(.25,.8), xycoords="axes fraction", fontsize=5)
+
     plt.subplots_adjust(wspace=0, left=.12, right=.98, bottom=.2, top=.86)
+@np.vectorize
+def exact(X, Y):
+    # X = 2kq/(k2+q2)
+    # Y = |k-q|^2/(2z(1-z)E)
+    # (k2+q2)/(2z(1-z)E) = Y/(1-X)
+    # 2kq/(2z(1-z)E) = Y*X/(1-X)
+    def df(x):
+        cos = np.cos(x)
+        return X*cos/(1 - X*cos) * (1-np.cos(Y/(1-X) - cos*Y*X/(1-X)))
+    return quad(df, 0, 2*np.pi)[0]/2./np.pi
+
+@np.vectorize
+def Gen(kt2LoverEstuff, q2overkt2):
+    X = 2*np.sqrt(q2overkt2)/(1+q2overkt2)
+    Y = kt2LoverEstuff*(1+q2overkt2)*(1-X)
+    return exact(X, Y)
+
+@np.vectorize
+def HT(kt2LoverEstuff, q2overkt2):
+    return 2*q2overkt2*(1-np.cos(kt2LoverEstuff))
+
+@np.vectorize
+def HT2(kt2LoverEstuff, q2overkt2):
+    X = 2*np.sqrt(q2overkt2)/(1+q2overkt2)
+    Y = kt2LoverEstuff*(1+q2overkt2)*(1-X)
+    A = Y/(1-X)
+    B = Y*X/(1-X)
+    phase1 = jv(0,B)-jv(1,B)/B
+    phase2 = -jv(1,B)
+    if (q2overkt2>1):
+        q2overkt2 = 1./q2overkt2
+    return 2*q2overkt2*(1 - 2*np.cos(A)*phase1) + 2*np.sqrt(q2overkt2)*np.sin(A)*phase2
+from scipy.special import jv
+
+@plot
+def Other_GENvsHT1():
+    x = np.exp(np.linspace(-1.5,4,2000))
+    fig, axes = plt.subplots(1,5, figsize=(1.1*textwidth,.35*textwidth),sharex=True, sharey=True)
+    for q2overkt2, ax, s in zip([.25, 0.5, .9999, 2,4], axes, [0.25,0.5,1,2,4]):
+        ax.plot(1/x, HT(x,q2overkt2),'-',color=cb,alpha=.7, label='H.T.')
+        #ax.plot(1/x, HT2(x,q2overkt2),'-',color=cg,alpha=1, label='H.T., improved')
+        ax.plot(1/x, Gen(x,q2overkt2),'-',color=cr,alpha=.7,lw=1, label='Gen.')
+        ax.plot(1/x, 0/x, 'k-',lw=.5)
+        ax.semilogx()
+        ax.set_xlim(1/x[-1],1/x[0])
+        ax.set_ylim(-1,7)
+        if ax.is_first_col():
+            ax.set_ylabel(r"$\frac{d\Delta_1}{dk_\perp^2}(u,\frac{k_\perp^2}{l_\perp^2})$ (a.u.)")
+        ax.annotate("$k_\perp^2/l_\perp^2 = {}$".format(s),xy=(.3,.88), xycoords="axes fraction")
+    axes[2].set_xlabel(r"$u = \tau_f/t^+$")
+    axes[0].legend(loc=(.1,.6))
+    plt.subplots_adjust(wspace=0,top=.99,left=.12,right=.98,bottom=.25)
+
+@plot
+def Other_spacetime4():
+    fig, ax = plt.subplots(1,1,figsize=(.5*textwidth,textwidth*.4))
+
+    bins = np.exp(np.linspace(np.log(.02),np.log(100),21))
+    dt = bins[1:]-bins[:-1]
+    t = (bins[1:]+bins[:-1])/2.
+    kl,kh = 0,10
+    for sqrts,color in zip([15],[cr,cg,cb]):
+        Neve = 1e5
+        status, xB, Q20, nu, tauf, lt2, pt2, z, k0, L  = np.loadtxt("Run/SpaceTime/{}vac/82-208-stat.dat".format(sqrts)).T
+        tt = tauf/L
+        cut = (status==111) & (L>50) #& (kl<k0)& (k0<kh)
+        H, _ = np.histogram(tt[cut],bins=bins)
+        H = np.array(H)
+        dH = np.sqrt(H)/(dt*Neve)
+        H0 = H/(dt*Neve)
+        ax.plot(t, H0, 'k-', lw=0.35)
+
+
+        status, xB, Q20, nu, tauf, lt2, pt2, z, k0, L  = np.loadtxt("Run/SpaceTime/{}/82-208-stat.dat".format(sqrts)).T
+        tt = tauf/L
+        cut = (status==111) & (L>50) # & (kl<k0)& (k0<kh)
+        H, _ = np.histogram(tt[cut],bins=bins)
+        H = np.array(H)
+        dH = np.sqrt(H)/(dt*Neve)
+        H1 = H/(dt*Neve)
+        ax.plot(t, H1, '-', alpha=.7, color=color,lw=1., label=r'$\sqrt{{s}}={}$'.format(sqrts))
+        ##
+        cut = (status==222) & (L>50) # & (kl<k0)& (k0<kh)
+        H, _ = np.histogram(tt[cut],bins=bins)
+        H = np.array(H)
+        dH = np.sqrt(H)/(dt*Neve)
+        H1 = H/(dt*Neve)
+        ax.plot(t, H1, '--', alpha=.7, color=color)
+
+    ax.set_title(r"$e$+Pb, $Q>2$ GeV, $\nu>10$ GeV, $L>10$ fm",fontsize=5)
+    ax.set_ylabel(r"$L dN_{g}/d\tau_{f,g}$")
+    ax.set_xlim(0.02,100)
+    ax.set_xlabel(r"$\tau_{f,g}/L$")
+    ax.semilogy()
+    ax.semilogx()
+    ax.set_ylim(1e-5, 1e3)
+    #ax.legend(loc=(.6,.45))
+    #ax.set_xticks([0,1,2,3,4,5,6])
+    ax.plot([1,1],[1e-5,1e-4],'k')
+    ax.plot([1,1.1],[1e-5,2e-5],'k')
+    ax.plot([1,1/1.1],[1e-5,2e-5],'k')
+    ax.annotate(r"Thin solid: vac shower"+'\n'\
+                 r"Thick solid: shower $p_T>Q_0$"+'\n'\
+                +r"Dashed: gluon $p_T<Q_0$",
+                xy=(.22,.77), xycoords='axes fraction',fontsize=5)
+    plt.subplots_adjust(wspace=0.25, left=.21, right=.96, bottom=.18, top=.88)
+
+
 #@plot
 def AvgKinematics_nu():
     AvgKinematics('nu')

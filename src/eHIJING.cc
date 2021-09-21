@@ -25,7 +25,7 @@ const double mu = 0.25; // [GeV]
 const double mu2 = std::pow(mu, 2); // GeV^2
 // minimum and maximum nuclear thickness function
 // for tabulation
-const double TAmin = 0.05/5.076/5.076;
+const double TAmin = 0.02/5.076/5.076;
 const double TAmax = 2.8/5.076/5.076;
 // The b parameter for 3-flavor QCD
 // b0 = 11 - 2/3*Nf
@@ -89,13 +89,13 @@ avgxG_(avgxG),
 rd(),
 gen(rd()),
 flat_gen(0.,1.),
-Qs2Table(2, {21,21}, // TA, ln(Q2/x) --> size and grid for Qs table
+Qs2Table(2, {51,51}, // TA, ln(Q2/x) --> size and grid for Qs table
            {TAmin, std::log(1.0)},
-           {TAmax, std::log(1e3)}
+           {TAmax, std::log(1e5)}
        ),
 RateTable(3, {21,21,21}, // TA, ln(Q2/x), ln(l2) --> size and grid for Qs table
           {TAmin, std::log(1.0), std::log(0.01)},
-          {TAmax, std::log(1e3), std::log(4.0)}
+          {TAmax, std::log(1e5), std::log(4.0)}
       )
 {
 }
@@ -246,9 +246,10 @@ int MultipleCollision::sample_all_qt2(int pid, double E, double L, double xB, do
     double CR = (pid==21)? CA : CF;
     double qs2 = Qs2(xB, Q2, TA);
     double tildeTA = Kfactor_*normG(q2max, qs2, powerG_, lambdaG_, avgxG_)*M_PI*CR*TA/dA;
+    if (tildeTA<1e-15) return q2_list.size();
     double qs2overCTA = qs2/tildeTA;
     double q2 = q2max;
-    double q2min = EHIJING::mu2/4.;
+    double q2min = EHIJING::mu2/16.;
     while (q2 > q2min) {
         // sample the next hard multiple collision
         double lnr = std::log(flat_gen(gen));
@@ -334,13 +335,11 @@ avgxG_(avgxG),
 rd(),
 gen(rd()),
 flat_gen(0.,1.),
-GHT_z_kt2_Table(4, {11,41,41,201}, // TA, ln(Q2/x), ln(kt2), ln(3+L/tauf) --> size and grid for H-T table -- 1
-           {TAmin, std::log(1.0), std::log(2*mu2), std::log(5+.05)},
-           {TAmax, std::log(1e2), std::log(1e2),  std::log(5+500)}
-       ),
-GHT_kt2_Table(4, {11,41,41,201}, // TA, ln(Q2/x), ln(kt2), ln(3+L*kt2/2E) --> size and grid for H-T table -- 2
-           {TAmin, std::log(1.0), std::log(2*mu2), std::log(5+.05)},
-           {TAmax, std::log(1e2), std::log(1e2),  std::log(5+500)}
+GHT_Angular_Table(2, {51, 51}, // X = delta = 2kq/(k^2+q^22),
+                               // ln(1+Y) = log(1+ (|k|-|q|)^2*t/(2*z*(1-z)*E) )
+                               // 0.5<delta<1, ln(1)<ln(1+Y)<ln(11)
+           {0.5, 1e-3},
+           {0.99, std::log(11.0)}
        )
 {
 }
@@ -352,7 +351,7 @@ void eHIJING::Tabulate(std::filesystem::path table_path){
         // the following routine will use the max number of hard ware concurrency of your computer
         // to parallel the computation of the table
         std::filesystem::path fname = table_path/std::filesystem::path("GHT.dat");
-        /*if (std::filesystem::exists(fname)) {
+        if (std::filesystem::exists(fname)) {
             std::cout << "Loading GHT Table" << std::endl;
             std::ifstream f(fname.c_str());
             int count = 0;
@@ -360,17 +359,15 @@ void eHIJING::Tabulate(std::filesystem::path table_path){
             std::string line;
             while(getline(f, line)){
                 std::istringstream in(line);
-                in >> entry1 >> entry2;
-               //std::cout << entry1 << " " << entry2 << std::endl;
-                if (count>=GHT_kt2_Table.size()){
+                in >> entry1;
+                if (count>=GHT_Angular_Table.size()){
                     std::cerr << "Loading table GHT: mismatched size - 1" << std::endl;
                     exit(-1);
                 }
-                GHT_z_kt2_Table.set_with_linear_index(count, entry1);
-                GHT_kt2_Table.set_with_linear_index(count, entry2);
+                GHT_Angular_Table.set_with_linear_index(count, entry1);
                 count ++;
             }
-            if (count<GHT_kt2_Table.size()){
+            if (count<GHT_Angular_Table.size()){
                 std::cerr << "Loading table GHT: mismatched size - 2" << std::endl;
                 exit(-1);
             }
@@ -379,7 +376,7 @@ void eHIJING::Tabulate(std::filesystem::path table_path){
             std::ofstream f(fname.c_str());
             // Table Qs as a function of lnx, lnQ2, TA
             std::atomic_int counter =  0;
-            int percentbatch = int(GHT_z_kt2_Table.size()/100.);
+            int percentbatch = int(GHT_Angular_Table.size()/100.);
             auto code = [this, percentbatch](int start, int end) {
                 static std::atomic_int counter;
                 for (int c=start; c<end; c++) {
@@ -388,103 +385,48 @@ void eHIJING::Tabulate(std::filesystem::path table_path){
                     if (counter%percentbatch==0) {
                       std::cout <<std::flush << "\r" << counter/percentbatch << "% done";
                     }
-                    auto index = GHT_z_kt2_Table.LinearIndex2ArrayIndex(c);
-                    auto xvals = GHT_z_kt2_Table.ArrayIndex2Xvalues(index);
-                    double TA = xvals[0];
-                    double Q2x = std::exp(xvals[1]);
-                    double kt2 = std::exp(xvals[2]);
-                    double Ltauf = std::exp(xvals[3])-5;
-                    double Qs2 = MultipleCollision::Qs2(Q2x, TA);
-                    double entry1 = 0., entry2 = 0.;
-                    if (kt2<Q2x) {
-                        entry1 = kt2/Qs2*compute_GHT_z_kt2(TA, Q2x, kt2, Ltauf, Qs2);
-                        entry2 = kt2/Qs2*compute_GHT_kt2(TA, Q2x, kt2, Ltauf, Qs2);
-                    }
-                    GHT_z_kt2_Table.set_with_linear_index(c, entry1);
-                    GHT_kt2_Table.set_with_linear_index(c, entry2);
+                    auto index = GHT_Angular_Table.LinearIndex2ArrayIndex(c);
+                    auto xvals = GHT_Angular_Table.ArrayIndex2Xvalues(index);
+                    double X = xvals[0];
+                    double ln1Y = xvals[1];
+                    double Y = std::exp(ln1Y)-1.;
+                    double entry1 = 0.;
+                    entry1 = compute_GHT_Angular_Table(X, Y);
+                    GHT_Angular_Table.set_with_linear_index(c, entry1);
                 }
             };
             std::vector<std::thread> threads;
             int nthreads = std::thread::hardware_concurrency();
-            int padding = int(std::ceil(GHT_z_kt2_Table.size()*1./nthreads));
-            std::cout << "Generating GHT tables with " << nthreads << " thread" << std::endl;
+            int padding = int(std::ceil(GHT_Angular_Table.size()*1./nthreads));
+            std::cout << "Generating GHT angular tables with " << nthreads << " thread" << std::endl;
             for(auto i=0; i<nthreads; ++i) {
                 int start = i*padding;
-                int end = std::min(padding*(i+1), GHT_z_kt2_Table.size());
+                int end = std::min(padding*(i+1), GHT_Angular_Table.size());
                 threads.push_back( std::thread(code, start, end) );
             }
             for(auto& t : threads) t.join();
-            for (int c=0; c<GHT_z_kt2_Table.size(); c++) {
-                f << GHT_z_kt2_Table.get_with_linear_index(c) << " "
-                   << GHT_kt2_Table.get_with_linear_index(c)   << std::endl;
+            for (int c=0; c<GHT_Angular_Table.size(); c++) {
+                f << GHT_Angular_Table.get_with_linear_index(c) << std::endl;
             }
-        }*/
+        }
         std::cout << "... done" << std::endl;
     }
 }
 
 // computation of generalized HT table
-double eHIJING::compute_GHT_z_kt2(double TA, double Q2xB, double kt2, double Ltauf, double Qs2) {
-    double prefactor = 2.0*piCAoverdA*TA; // integrate phi from 0 to pi,i.e, the factor two
-    auto dF1 = [this, Qs2, Q2xB, kt2, Ltauf](const double * x){
-        double lnq2 = x[0], phi = x[1];
-        double q2 = std::exp(lnq2);
-        double cphi = std::cos(phi);
-        double Ltaufq2 = q2/kt2*Ltauf;
-        double A = 2*std::sqrt(Ltauf*Ltaufq2)*cphi;
-        double B = Ltauf + Ltaufq2 - A;
-        double Phase = A/B*(1.-std::sin(B)/B);
-        double xg = q2/Q2xB;
-        double aPhiG = alphas_PhiG(xg, q2, Qs2, Q2xB, this->powerG_, this->lambdaG_, this->avgxG_);
-        std::vector<double> res{Phase*aPhiG/M_PI};
-        return res;
+double eHIJING::compute_GHT_Angular_Table(double X, double Y) {
+    double A = Y/(1.-X);
+    double B = Y*X/(1.-X);
+    auto dfdphi = [X, Y, A, B](double phi) {
+        double cosphi = std::cos(phi);
+        double xcphi = X*cosphi;
+        return xcphi/(1.-xcphi) * (1.-std::cos(A-B*cosphi));
     };
-    // it is numerically more stable to apply quaduature separately to
-    // two different domins of the integration 0<q2<kt2 and kt2<q2<Q^2/xB
-    double xmin1[2] = {std::log(mu2), 0};
-    double xmax1[2] = {std::log(kt2), M_PI};
-    double xmin2[2] = {std::log(kt2), 0};
-    double xmax2[2] = {std::log(Q2xB), M_PI};
-    double err;
-    double P1 = quad_nd(dF1, 2, 1, xmin1, xmax1, err)[0];
-    double P2 = 0;
-    if (kt2<Q2xB) P2 = quad_nd(dF1, 2, 1, xmin2, xmax2, err)[0];
-    return prefactor*(P1+P2);
+    double error;
+    double result = quad_1d(dfdphi, {0., M_PI}, error);
+    result /= M_PI;
+    return result;
 }
-
-double eHIJING::compute_GHT_kt2(double TA, double Q2xB, double kt2, double Lk2_2E, double Qs2) {
-    double prefactor = 2.0*M_PI*CA/dA*TA; // integrate phi from 0 to pi,i.e, the factor two
-    auto dF1 = [this, Qs2, Q2xB, kt2, Lk2_2E](const double * x){
-        double Emax = Q2xB/2/Mproton;
-        double zmin = .2/Emax;
-        double zmax = 1.0-zmax;
-        double lnq2 = x[0], phi = x[1];
-        double q2 = std::exp(lnq2);
-        double cphi = std::cos(phi);
-        double Lq2_2E = q2/kt2*Lk2_2E;
-        double A = 2*std::sqrt(Lk2_2E*Lq2_2E)*cphi;
-        double B = Lk2_2E + Lq2_2E - A;
-        double Phase = A/B*( CHT_F2(B/zmin) - CHT_F2(B/zmax) + FiniteZcorr(B) );
-        double xg = q2/Q2xB;
-        double aPhiG = alphas_PhiG(xg, q2, Qs2, Q2xB, this->powerG_, this->lambdaG_, this->avgxG_);
-        std::vector<double> res{Phase*aPhiG/M_PI};
-        return res;
-    };
-    // it is numerically more stable to apply quaduature separately to
-    // two different domins of the integration 0<q2<kt2 and kt2<q2<Q^2/xB
-    double xmin1[2] = {std::log(mu2), 0};
-    double xmax1[2] = {std::log(kt2), M_PI};
-    double xmin2[2] = {std::log(kt2), 0};
-    double xmax2[2] = {std::log(Q2xB), M_PI};
-    double err;
-    double P1 = quad_nd(dF1, 2, 1, xmin1, xmax1, err)[0];
-    double P2 = 0;
-    if (kt2<Q2xB) P2 = quad_nd(dF1, 2, 1, xmin2, xmax2, err)[0];
-    return prefactor*(P1+P2);
-}
-
-
-
 
 bool eHIJING::next_kt2_stochastic(double & kt2, int pid,
                         double E,
@@ -505,6 +447,7 @@ bool eHIJING::next_kt2_stochastic(double & kt2, int pid,
             double maxlogmed = 0.;
             for (int i=0; i<Ncolls; i++){
                 double q2 = qt2s[i], t = ts[i];
+                if (q2>kt2) continue;
                 double phasemax = inte_C((2*zmax*E)/(t*kt2min)) - inte_C((2*zmin*E)/(t*kt2));
                 maxlogmed += q2 * phasemax ;
             }
@@ -515,7 +458,7 @@ bool eHIJING::next_kt2_stochastic(double & kt2, int pid,
             double logmed = 0.;
             for (int i=0; i<Ncolls; i++){
                 double q2 = qt2s[i], t = ts[i];
-
+                if (q2>kt2) continue;
                 double phase = inte_C((2*zmax*E)/(t*kt2)) - inte_C((2*zmin*E)/(t*kt2));
                 logmed += q2 * phase;
             }
@@ -531,7 +474,7 @@ bool eHIJING::next_kt2_stochastic(double & kt2, int pid,
                 double q2 = qt2s[i], t = ts[i];
                 maxmedcoeff += t*(kt2 + q2);
             }
-            maxmedcoeff *= 2.*CAoverCR/E;
+            maxmedcoeff *= CAoverCR/(2.*E)*maxdiffz;
             double Crad = CR_2overb0 * (logvac + maxmedcoeff);
             double r = flat_gen(gen);
             kt2 = mu2 * std::pow(kt2/mu2, std::pow(r, 1.0/Crad) );
@@ -541,7 +484,7 @@ bool eHIJING::next_kt2_stochastic(double & kt2, int pid,
                 double q2 = qt2s[i], t = ts[i];
                 medcoeff += t*(kt2 + q2);
             }
-            medcoeff *= 2.*CAoverCR/E;
+            medcoeff *= CAoverCR/(2.*E)*maxdiffz;
             acceptance = (logvac + medcoeff) / (logvac + maxmedcoeff);
         }
     }
@@ -552,214 +495,86 @@ double eHIJING::sample_z_stochastic(double & z, int pid,
                         double E,
                         double kt2,
                         std::vector<double> qt2s,
-                        std::vector<double> ts) {
+                        std::vector<double> ts,
+                        std::vector<double> phis) {
     double CR = (pid==21)? CA : CF;
     double zmin = std::min(.4/E, .4);
     double zmax = 1. - zmin;
+
     int Ncolls = ts.size();
     double acceptance = 0.;
     double weight = 1.0;
     if (mode_==0){
         while (acceptance<flat_gen(gen)) {
             z = zmin*std::pow(zmax/zmin, flat_gen(gen));
-            double tauf = 2*z*(1.0-z)*E/kt2;
+            double tauf = 2.*z*(1.0-z)*E/kt2;
             double w = 1.0, wmax = 1.0;
             for (int i=0; i<Ncolls; i++){
                 double q2 = qt2s[i], t = ts[i];
+                if (q2>kt2) continue;
                 w += 2.*q2/kt2 * CA / CR * (1.-cos(t/tauf));
                 wmax += 4.*q2/kt2 * CA / CR;
             }
             acceptance = w/wmax;
         }
     } else {
-        while (acceptance<flat_gen(gen)) {
-            double a = 0.;
-            for (int i=0; i<Ncolls; i++){
-                double q2 = qt2s[i], t = ts[i];
-                a += (kt2 +q2)*t;
-            }
-            a /= (2.*E);
-            // sample z ~ 1/z + a/[z^2(1-z)]
-            // two important scale
-            double z1 = a/(1.+a);
-            double z2 = (1.+a)/(1.+2*a);
-            // Now there are five cases:
-            double r = flat_gen(gen);
-            double acceptacne = 1.;
-            if (zmin<zmax && zmax<z1) {
-                double N = 3.*a*(1./zmin-1./zmax);
-                z = 1./(1./zmin - r*N/(3.*a));
-                acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/z/z);
-            }
-            if (zmin<z1 && z1<zmax && zmax<z2){
-                double N1 = 3.*a*(1./zmin-1./z1);
-                double N2 = 3.*(1-a)*std::log(zmax/z1);
-                double Ntot = N1 + N2;
-                double Pc = N1/Ntot;
-                if (r<Pc){
-                    z = 1./(1/zmin - r*Ntot/(3.*a));
-                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/z/z);
-                } else {
-                    z = z1*std::exp((r*Ntot - N1)/(3.*(1+a)));
-                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*(1.+a)/z);
-                }
-            }
-            if (z1<zmin && zmax <z2){
-                double N = 3.*(1.+a)*std::log(zmax/zmin);
-                z = zmin*std::exp(r*N/(3.*(1.+a)));
-                acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*(1.+a)/z);
-            }
-            if (zmin<z1 && z2<zmax){
-                double N1 = 3.*a*(1/zmin-1./z1);
-                double N2 = 3.*(1.+a)*std::log(z2/z1);
-                double N3 = 3.*a*std::log((1-z2)/(1.-zmax));
-                double Ntot = N1+N2+N3;
-                double Pc1 = N1/Ntot, Pc2 = (N1+N2)/Ntot;
-                if (r<Pc1){
-                    z = 1./(1/zmin - r*Ntot/(3.*a));
-                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/z/z);
-                } else if (r<Pc2){
-                    z = z1*std::exp((r*Ntot - N1)/(3.*(1+a)));
-                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*(1.+a)/z);
-                } else{
-                    z = 1. - (1-z2) * std::exp( - (r*Ntot - N1 - N2)/(3.*a) );
-                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/(1.-z));
-                }
-            }
-            if (z1<zmin && z2<zmax){
-                double N1 = 3.*(1.+a)*std::log(z2/zmin);
-                double N2 = 3.*a*std::log((1.-z2)/(1.-zmax));
-                double Ntot = N1 + N2;
-                double Pc = N1/Ntot;
-                if (r<Pc) {
-                    z = zmin*std::exp(r*Ntot/(3.*(1.+a)));
-                    acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*(1.+a)/z);
-                } else {
-                  z = 1. - (1-z2) * std::exp( - (r*Ntot - N1)/(3.*a) );
-                  acceptance = ( 1./z + a/(z*z*(1-z)) ) / (3.*a/(1.-z));
-                }
-            }
-        }
-        // sample phi uniformly
-        double phi = flat_gen(gen)*2.*M_PI;
-        // compute the weight
-        double w = 1.0, wmax = 1.0;
+        double a = 0.;
         for (int i=0; i<Ncolls; i++){
             double q2 = qt2s[i], t = ts[i];
-            double kdotq = std::sqrt(kt2*q2)*std::cos(phi);
-            double kmq2 = kt2 + q2 - 2.*kdotq;
-            double tauf = 2.*z*(1.-z)*E/kmq2;
-            w += 2.*kdotq/kmq2 * (1.-std::cos(t/tauf));
-            wmax += (kt2+q2)*t/(2.*z*(1-z)*E);
+            a += (kt2 +q2)*t;
         }
-        weight = w/wmax;
-    }
-    return std::max(weight,0.);
-}
+        a *= CA/CR/(2.*E);
+        double Norm = (1. + 2.*a)*std::log(zmax/zmin) + a*(1./zmin-1/zmax);
+        // sample z ~ 1/z + a/[z^2(1-z)]
+      	double left = zmin;
+      	double right = zmax;
+      	double mid = (left+right)/2.;
+      	double r = flat_gen(gen);
+      	while(right-left > 1e-3) {
+        		mid = (left+right)/2.;
+        		double fmid = ( (1+a)*std::log(mid/zmin)
+        			    + a*(1./zmin-1/mid)
+        			    + a*std::log(zmax/(1-mid)) ) / Norm;
+        		if (fmid<r) left = mid;
+        		else right = mid;
+      	}
+        z = mid;
+        if (Ncolls==0) weight=1.;
+        else {
+           double wmax = CR/CA;
+           for (int i=0; i<Ncolls; i++){
+               double q2 = qt2s[i], t = ts[i];
+               wmax += (kt2+q2)*t;
+           }
+           wmax /= (2.*z*(1-z)*E);
 
-
-// sampling
-bool eHIJING::next_kt2(double & kt2, int pid, double E, double L,
-                       double kt2min, double xB, double Q20) {
-    double TA = rho0*L;
-    double CR = (pid==21)? CA : CF;
-    double Lover2E = L/2./E;
-    double CR_2overb0 = CR*2.0/b0;
-    if (mode_==0) { // Collinear HT
-        double qhat_g = MultipleCollision::qhatA(xB, Q20, std::max(TA, 1.0*5.076*rho0));
-        double qhat_g_2L = qhat_g*2.0*L;
-        double zmin = std::min(.2/E, .5);
-        double zmax = 1. - zmin;
-        double logvac = std::log(1./zmin - 1.);
-        double acceptance = 0.;
-        while (acceptance<flat_gen(gen) && kt2>kt2min) {
-            double Cvac = CR_2overb0 * logvac;
-            double DeltaFmax = CHT_F2(kt2*Lover2E/zmin) - CHT_F2(kt2min*Lover2E/zmax);
-            double Cmed = CR_2overb0 * qhat_g_2L/kt2min * DeltaFmax;
-            double r = flat_gen(gen);
-            double Ctot = Cmed + Cvac;
-            kt2 = mu2 * std::pow(kt2/mu2, std::pow(r, 1.0/Ctot) );
-
-            double DeltaFcorr = CHT_F2(kt2*Lover2E/zmin) - CHT_F2(kt2*Lover2E/zmax) + FiniteZcorr(kt2*Lover2E);
-            acceptance = (Cvac + CR_2overb0 * qhat_g_2L/kt2 * DeltaFcorr) / Ctot;
-        }
-    }
-    else{
-        double Emax = Q20/xB/2/Mproton;
-        double zmin = std::min(.2/Emax, .5);
-        double zmax = 1. - zmin;
-        double logvac = std::log(1./zmin - 1.);
-        double qs2 = MultipleCollision::Qs2(xB, Q20, TA);
-        double qs = std::sqrt(qs2);
-        double kt2_c = 2*std::max(Kfactor_*2*M_PI*qs2 * 2*(CHT_F2(Mproton*L/zmin)-CHT_F2(Mproton*L/zmax)) / logvac,
-                                  4*mu2);
-        double lnkt2_c = std::log(kt2_c/mu2);
-        double acceptance = 0.;
-        while (acceptance<flat_gen(gen) && (kt2 > kt2min)) {
-            double induced = induced_dFdkt2(xB, Q20, L, E, kt2)/logvac;
-            double r = flat_gen(gen);
-            double lninvr = std::log(1./r);
-            double Cvac = CR_2overb0 * logvac;
-            if ( kt2_c < kt2 || Kfactor_ < 1e-3) {
-                double Pc = 2*Cvac*std::log(std::log(kt2/mu2)/lnkt2_c);
-                if (lninvr < Pc || Kfactor_ < 1e-3) {
-                    kt2 = mu2 * std::pow(kt2/mu2, std::pow(r, 1.0/Cvac/2.0) );
-                    acceptance = ( 1 + induced)/2;
-                    if (acceptance > 1.) std::cout << "warn-A " << acceptance << std::endl;
-                } else {
-                    kt2 = mu2*std::pow(kt2_c/mu2, std::pow(r*std::exp(Pc), 1./Cvac/(1+Kfactor_*L*qs)) );
-                    acceptance = ( 1 + induced)/(1.0+Kfactor_*L*qs);
-                    if (acceptance > 1.) std::cout << "warn-B " << acceptance << std::endl;
-                }
-            } else {
-                kt2 = mu2*std::pow(kt2/mu2, std::pow(r, 1./Cvac/(1+4*Kfactor_*L*qs)) );
-                acceptance = ( 1 + induced)/(1.0+4*Kfactor_*L*qs);
-                if (acceptance > 1.) std::cout << "warn-C " << acceptance << std::endl;
-            }
+           double w = CR/CA;
+           for (int i=0; i<Ncolls; i++){
+               double dw;
+               double q2 = qt2s[i], t = ts[i], phi = phis[i];
+               double A = (kt2+q2)*t/(2.*z*(1-z)*E),
+                      B = 2.*std::sqrt(kt2*q2)*t/(2.*z*(1-z)*E);
+               double X = B/A;
+               double Y = A*(1.-X);
+               if (X<.5){
+                    double jv0 = std::cyl_bessel_j(0,B),
+                           jv1 = std::cyl_bessel_j(1,B);
+                    dw = - X*std::sin(A)*jv1
+                         + X*X * ( .5 + X*std::cos(A) * (jv1/B - jv0) );
+               } else {
+                   if (Y>10.){
+                       dw = 1./std::sqrt(1.-X*X)-1;
+                   }
+                   else {
+                       dw = GHT_Angular_Table.interpolate({X, std::log(1.+Y)});
+                   }
+               }
+               w += dw;
+           }
+           weight = w/wmax;
         }
     }
-    return (kt2>kt2min);
-}
-
-bool eHIJING::sample_z(double & z, int pid, double E, double L, double kt2, double xB, double Q20) {
-    double TA = rho0*L;
-    double Lover2E = L/2./E;
-    double W0 = 0.;
-    if (mode_==0) { // Collinear HT
-        double qhat_g = MultipleCollision::qhatA(xB, Q20, std::max(TA, 1.0*5.076*rho0));
-        double qhat_g_2L_over_kt2 = qhat_g*2.0*L/kt2;
-        double zmin = .2/E;
-        double zmax = 1. - zmin;
-        double acceptance = 0.;
-        while (acceptance<flat_gen(gen)) {
-            z = zmin*std::pow(zmax/zmin, flat_gen(gen));
-            acceptance = (1.0 + qhat_g_2L_over_kt2 * CHT_F1(kt2*Lover2E/z/(1.-z)) )
-                       / (1.0 + qhat_g_2L_over_kt2 * 1.22);
-        }
-    }
-    else {
-        double Emax = Q20/xB/2/Mproton;
-        double zmin = .2/Emax;
-        double zmax = 1. - zmin;
-        double acceptance = 0.;
-        double qs2 = MultipleCollision::Qs2(xB, Q20, TA);
-        while (acceptance<flat_gen(gen)) {
-            z = zmin*std::pow(zmax/zmin, flat_gen(gen));
-            W0 = induced_dFdkt2dz(xB, Q20, L, E, kt2, z);
-            acceptance = (1.0 + W0)
-                       / (1.0 + 4*Kfactor_ * qs2/kt2 * 8*M_PI);
-            if (acceptance > 1.) std::cout << "warn-D " << acceptance << std::endl;
-        }
-    }
-
-    double acceptance = (pid==21)? (1.+std::pow(1.-z,3))/2. : (1.+std::pow(1.-z,2))/2.;
-    double cut = .25*kt2/E/E;
-    return (acceptance * (1.0 + (1.0-z/2.)*W0 ) / (1.0+W0) > flat_gen(gen))
-        && (z*(1-z)>cut)
-        && (std::pow(1-z, 2)>cut)
-        && (std::pow(z,2)>cut)
-        && (z*E > 0.5)
-        && ((1-z)*E > 0.5);
+    return std::min(std::max(weight,0.),1.);
 }
 
 // In medium fragmentation process
