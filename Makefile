@@ -32,8 +32,7 @@ LOCAL_SRC=src
 LOCAL_TMP=tmp
 LOCAL_MKDIRS:=$(shell mkdir -p $(LOCAL_TMP) $(LOCAL_LIB))
 CXX_COMMON:=--std=c++17 -I$(LOCAL_INCLUDE) $(CXX_COMMON) \
--I/home/weiyao/miniconda3/include\
--L/home/weiyao/miniconda3/lib -lgsl -lgslcblas -lm
+-I/global/common/sw/cray/cnl7/haswell/gsl/2.5/intel/19.0.3.199/7twqxxq/include -L/global/common/sw/cray/cnl7/haswell/gsl/2.5/intel/19.0.3.199/7twqxxq/lib -lgsl -lgslcblas -lm
 
 
 # PYTHIA.

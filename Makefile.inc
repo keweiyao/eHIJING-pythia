@@ -1,12 +1,12 @@
 # PYTHIA configuration file.
-# Generated on Wed 28 Jul 2021 01:17:23 PM PDT with the user supplied options:
-# --prefix=/home/weiyao/miniconda3/envs/ehijing/
+# Generated on Mon Sep 20 20:16:50 PDT 2021 with the user supplied options:
+# --prefix=/global/homes/w/wk42/miniconda3/envs/ehijing
 
 # Install directory prefixes.
-PREFIX_BIN=/home/weiyao/miniconda3/envs/ehijing//bin
-PREFIX_INCLUDE=/home/weiyao/miniconda3/envs/ehijing//include
-PREFIX_LIB=/home/weiyao/miniconda3/envs/ehijing//lib
-PREFIX_SHARE=/home/weiyao/miniconda3/envs/ehijing//share/Pythia8
+PREFIX_BIN=/global/homes/w/wk42/miniconda3/envs/ehijing/bin
+PREFIX_INCLUDE=/global/homes/w/wk42/miniconda3/envs/ehijing/include
+PREFIX_LIB=/global/homes/w/wk42/miniconda3/envs/ehijing/lib
+PREFIX_SHARE=/global/homes/w/wk42/miniconda3/envs/ehijing/share/Pythia8
 
 # Compilation flags (see ./configure --help for further documentation).
 ENABLE_SHARED=false

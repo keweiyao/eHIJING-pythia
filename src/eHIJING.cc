@@ -25,7 +25,7 @@ const double mu = 0.25; // [GeV]
 const double mu2 = std::pow(mu, 2); // GeV^2
 // minimum and maximum nuclear thickness function
 // for tabulation
-const double TAmin = 0.02/5.076/5.076;
+const double TAmin = 0.1/5.076/5.076;
 const double TAmax = 2.8/5.076/5.076;
 // The b parameter for 3-flavor QCD
 // b0 = 11 - 2/3*Nf
@@ -44,34 +44,37 @@ double alphas(double Q2){
 }
 // MultipleCollision related functions
 double normG(double Q2x, double Qs2, double powerG, double lambdaG, double avgxG){
-    double BetaG = gsl_sf_beta(1.+powerG, 1.+lambdaG);
-    if (Q2x<Qs2) return  twoPioverb0*avgxG/BetaG/std::log(Q2x/mu2);
-    else         return  twoPioverb0*avgxG/BetaG/(.5*std::log(Q2x*Qs2/mu2/mu2));
+     return 1;
+     //double BetaG = gsl_sf_beta(1.+powerG, 1.+lambdaG);
+    //if (Q2x<Qs2) return  twoPioverb0*avgxG/BetaG*Qs2/Q2x/std::log(Qs2/mu2);
+    //else         return  twoPioverb0*avgxG/BetaG/std::log(Qs2/mu2)/(1.+std::log(Q2x/Qs2));
+    //double GammaG = gsl_sf_gamma(powerG+1.)/std::pow(1.+lambdaG, 1.+powerG);
+    //if (Q2x<Qs2) return  twoPioverb0*avgxG/BetaG/std::log(Q2x/mu2);
+    //else         return  twoPioverb0*avgxG/BetaG/(.5*std::log(Q2x*Qs2/mu2/mu2));
 }
 double PhiG(double x, double q2, double Qs2, double Q2x, double powerG, double lambdaG, double avgxG){
     double result;
-    if (q2>Qs2) result = std::pow(1.-x, powerG)*std::pow(x, lambdaG) / (q2*alphas(q2));
+    if (q2>Qs2) result = std::pow(1.-x, powerG)*std::pow(x, lambdaG) / (q2*alphas(Qs2));
     else        result = std::pow(1.-x, powerG)*std::pow(x, lambdaG) / (Qs2*alphas(Qs2));
     return result * normG(Q2x, Qs2, powerG, lambdaG, avgxG);
+    //if (q2>Qs2) result = std::pow(-std::log(x), powerG)*std::pow(x, lambdaG) / (q2*alphas(q2));
+    //else        result = std::pow(-std::log(x), powerG)*std::pow(x, lambdaG) / (Qs2*alphas(Qs2));
+    //return result * normG(Q2x, Qs2, powerG, lambdaG, avgxG);
+
 }
 double alphas_PhiG(double x, double q2, double Qs2, double Q2x, double powerG, double lambdaG, double avgxG){
     double result;
     if (q2>Qs2) result = std::pow(1.-x, powerG)*std::pow(x, lambdaG) / q2;
     else        result = std::pow(1.-x, powerG)*std::pow(x, lambdaG) / Qs2;
     return result * normG(Q2x, Qs2, powerG, lambdaG, avgxG);
-}
-// induced radiation related functions
-double CHT_F2(double u){
-    return - gsl_sf_Ci(u) + std::log(u) + std::sin(u)/u;
+    //if (q2>Qs2) result = std::pow(-std::log(x), powerG)*std::pow(x, lambdaG) / q2;
+    //else        result = std::pow(-std::log(x), powerG)*std::pow(x, lambdaG) / Qs2;
+    //return result * normG(Q2x, Qs2, powerG, lambdaG, avgxG);
 }
 
 // integrate du (1-cos(1/u)) / u
 double inte_C(double u){
     return gsl_sf_Ci(1./u) + std::log(u);
-}
-
-double FiniteZcorr(double a){
-    return -1.76*std::pow(a, 0.966) * std::exp(-0.907*std::pow(a, 2.871));
 }
 
 double CHT_F1(double x){
@@ -198,12 +201,12 @@ double MultipleCollision::Qs2_self_consistent_eq(double Qs2, double TA, double Q
 // Solver of the Qs2 self-consistent equation, using a simple bisection
 double MultipleCollision::compute_Qs2(double TA, double Q2xB){
     // a naive bisection
-    double xleft = mu2*.1, xright = Q2xB*10.0;
+    double xleft = mu2*.25, xright = Q2xB*10.0;
     const double EPS = 1e-4;
     double yleft = Qs2_self_consistent_eq(xleft, TA, Q2xB),
            yright = Qs2_self_consistent_eq(xright, TA, Q2xB);
     if (yleft*yright>0) {
-        std::cout << "eHIJING warning: setting Qs2 = mu2*0.1" << std::endl;
+        std::cout << "eHIJING warning: setting Qs2 = mu2/4" << std::endl;
         return xleft;
     } else {
         do {

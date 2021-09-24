@@ -4,6 +4,22 @@ using namespace Pythia8;
 #include <random>
 #include <sstream>
 #include <algorithm>
+#include <unistd.h>
+std::vector<int> PIDS({111,211,-211,321,-321,2212,-2212});
+std::vector<double> zbins({0.0,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1});
+std::vector<double> Q2bins({1,1.5,2,2.5,3,4,6,8,10,15,20,25,50,81,200});
+std::vector<double> xBbins({1e-4,2e-4,4e-4,7e-4,1e-3,
+		                 2e-3,4e-3,7e-3,1e-2,
+				 2e-2,4e-2,7e-2,1e-1,
+				 2e-1,3e-1,4e-1,6e-1,
+				 8e-1,1e0});
+std::vector<double> nubins({4,5,6,8,10,12,14,16,18,20,
+		            24,30,40,50,80,120,140,160,
+			    200,250,300,400,500});
+std::vector<double> pTbins({.0,.025,.05,.1,
+		            .2,.3,.4,.5,.6,.7,.8,.9,1.0,
+			    1.1,1.2,1.3,1.4,1.6,1.8,2.0});
+
 class hadronizer{
 public:
    hadronizer():pythia(),rd(),gen(rd()),dist(0.,1.){
@@ -100,11 +116,13 @@ bool trigger(Pythia & pythia) {
 
     // In Breit frame, where gamma ~ (0,0,0,-Q),
     double y     = (pProton * pGamma) / (pProton * peIn);
-    return (1.0<Q2);
+    return (1.0<Q2) & (y<0.85);
 }
 
-template<typename T>
-void output(Pythia & pythia, T & plist, ofstream & f){
+std::vector<std::vector<double> > DpT2_z, DpT2_xB, DpT2_Q2, DpT2_nu;
+std::vector<std::vector<double> > dNz, dNxB, dNQ2, dNnu, dNpT;
+
+void FScount(Pythia & pythia, std::vector<Particle> & plist){
     // Compute four-momenta of proton, electron, virtual
     Vec4 pProton = pythia.event[1].p(); // four-momentum of proton
     Vec4 peIn    = pythia.event[4].p(); // incoming electron
@@ -113,7 +131,7 @@ void output(Pythia & pythia, T & plist, ofstream & f){
     // Q2, W2, Bjorken x, y.
     double Q2 = - pGamma.m2Calc(); // hard scale square
     double W2 = (pProton + pGamma).m2Calc();
-    double x  = Q2 / (2. * pProton * pGamma); // Bjorken x
+    double xB  = Q2 / (2. * pProton * pGamma); // Bjorken x
     double nu = pGamma.e();
     Vec4 pCoM = pGamma + pProton;
     Vec4 pGamma2 = pGamma;
@@ -132,21 +150,114 @@ void output(Pythia & pythia, T & plist, ofstream & f){
          pbst.bstback(pCoM);
          double xF = dot3(pGamma2, pbst);
          double z = p.e()/nu;
-         //if (xF<0) continue;
-         if (z>z1) { z1 = z; c1 = p.charge();}
-         else if (z>z2) { z2 = z; c2 = p.charge();}
-         //auto prot = p.p();
-         //prot.rot(0, phi);
-         //prot.rot(theta, 0);
-         //f << p.id() << " " << z << " " << prot.pT() << " " << nu << " " << Q2 << std::endl;
+         auto prot = p.p();
+         prot.rot(0, phi);
+         prot.rot(theta, 0);
+	 double pT = prot.pT();
+	 double pT2 = pT*pT;
+         // multiplicity
+	 if (W2>4.0 && xF>0.){
+             for (int ipid=0; ipid<PIDS.size();ipid++)
+             if ( p.id()==PIDS[ipid] ) {
+                 for (int i=0; i<nubins.size()-1;i++)
+                     if (nubins[i]<nu && nu<nubins[i+1] && z>.2)
+                         dNnu[ipid][i] += 1;
+                 for (int i=0; i<xBbins.size()-1;i++)
+                     if (xBbins[i]<xB && xB<xBbins[i+1] && nu>6. && z>.2)
+                         dNxB[ipid][i] += 1;
+		 for (int i=0; i<Q2bins.size()-1;i++)
+                     if (Q2bins[i]<Q2 && Q2<Q2bins[i+1] && nu>6. && z>.2)
+                         dNQ2[ipid][i] += 1;
+                 for (int i=0; i<zbins.size()-1;i++)
+                     if (zbins[i]<z && z<zbins[i+1] && nu>6.)
+                         dNz[ipid][i] += 1;
+                 for (int i=0; i<pTbins.size()-1;i++)
+                     if (pTbins[i]<pT && pT<pTbins[i+1] && nu>6. && z>.2)
+                         dNpT[ipid][i] += 1;
+	     }
+	 
+         }
+	 // pT broadening:
+	 if (W2>10.0){ 
+             for (int ipid=0; ipid<PIDS.size();ipid++){
+	         if ( p.id()==PIDS[ipid] ) {
+                     for (int i=0; i<nubins.size()-1;i++){
+	                 if (nubins[i]<nu && nu<nubins[i+1] && z>0.2) {
+		             DpT2_nu[2*ipid][i] += pT2;
+        		     DpT2_nu[2*ipid+1][i] += 1.0;
+	                 }
+	             }
+                     for (int i=0; i<xBbins.size()-1;i++){
+                         if (xBbins[i]<xB && xB<xBbins[i+1] && z>0.2) {
+                             DpT2_xB[2*ipid][i] += pT2;
+                             DpT2_xB[2*ipid+1][i] += 1.0;
+                         }
+                     }
+                     for (int i=0; i<Q2bins.size()-1;i++){
+                         if (Q2bins[i]<Q2 && Q2<Q2bins[i+1] && z>0.2) {
+                             DpT2_Q2[2*ipid][i] += pT2;
+                             DpT2_Q2[2*ipid+1][i] += 1.0;
+                         }
+                     }
+	             for (int i=0; i<zbins.size()-1;i++){
+                         if (zbins[i]<z && z<zbins[i+1] ) {
+                             DpT2_z[2*ipid][i] += pT2;
+                             DpT2_z[2*ipid+1][i] += 1.0;
+                         }
+                     }
+                 } 
+             }
         }
-    }
-    // exclude +- pairs
-    if (c1*c2>-.1) f << z1 << " " << z2 << " " << Q2 << " " << nu << " " << pythia.info.sigmaGen() << std::endl;
+     }
+   }
 }
-
 int main(int argc, char *argv[]) {
-  //
+  DpT2_z.resize(2*PIDS.size());
+  for (auto& it:DpT2_z){
+    it.resize(zbins.size()-1);
+    for (auto& iit:it)iit=0.;
+  }
+  DpT2_xB.resize(2*PIDS.size());
+  for (auto& it:DpT2_xB){
+    it.resize(xBbins.size()-1);
+     for (auto& iit:it)iit=0.;
+  }
+  DpT2_Q2.resize(2*PIDS.size());
+  for (auto& it:DpT2_Q2){
+    it.resize(Q2bins.size()-1);
+    for (auto& iit:it)iit=0.;
+  }
+  DpT2_nu.resize(2*PIDS.size());
+  for (auto& it:DpT2_nu){
+    it.resize(nubins.size()-1);
+    for (auto& iit:it)iit=0.;
+  }
+
+  dNnu.resize(PIDS.size());
+  for (auto& it:dNnu){
+    it.resize(nubins.size()-1);
+    for (auto& iit:it)iit=0.;
+  }
+  dNz.resize(PIDS.size());
+  for (auto& it:dNz){
+    it.resize(zbins.size()-1);
+    for (auto& iit:it)iit=0.;
+  }
+  dNxB.resize(PIDS.size());
+  for (auto& it:dNxB){
+    it.resize(xBbins.size()-1);
+    for (auto& iit:it)iit=0.;
+  }
+  dNpT.resize(PIDS.size());
+  for (auto& it:dNpT){
+    it.resize(pTbins.size()-1);
+    for (auto& iit:it)iit=0.;
+  }
+  dNQ2.resize(PIDS.size());
+  for (auto& it:dNQ2){
+    it.resize(Q2bins.size()-1);
+    for (auto& iit:it)iit=0.;
+  }
 
   // commandline args
   int nEvent = atoi(argv[1]);
@@ -156,17 +267,10 @@ int main(int argc, char *argv[]) {
   double K = atof(argv[5]);
   double ZoverA = Z*1./A;
   auto header = std::string(argv[6]);
+  int process_id = getpid();
   int ishadow = 0;
   double pTmin = .5;
   double pT2min = std::pow(pTmin, 2);
-
-  std::stringstream  ss;
-  ss << header << "/" << Z << "-" << A << "-cutRA.dat";
-  std::ofstream f(ss.str());
-
-  std::stringstream  ss2;
-  ss2 << header << "/" << Z << "-" << A << "-stat.dat";
-  std::ofstream fstat(ss2.str());
 
   std::random_device rd;  //Will be used to obtain a seed for the random number engine
   std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
@@ -178,20 +282,17 @@ int main(int argc, char *argv[]) {
   hadronizer HZ;
   EHIJING::NuclearGeometry  eHIJING_Geometry(A, Z);
   // Initialize
-  double Q2s[11]={1,2,3,4,5,6,8,10,20,40,100};
-  for (int iQ=0; iQ<10;iQ++){
   Pythia pythia;        // Generator
   Event& event = pythia.event; // Event record
   pythia.readFile("pythia-ep-settings.txt"); // read settings
   add_arg<double>(pythia, "TimeShower:pTmin", pTmin);
   add_arg<int>(pythia, "eHIJING:Mode", mode);
-  add_arg<int>(pythia, "PDF:nPDFSetA", (A>14)?3:0);
+  add_arg<int>(pythia, "PDF:nPDFSetA", (A>2)?0:0);
   add_arg<int>(pythia, "PDF:nPDFBeamA", inuclei);
   add_arg<int>(pythia, "eHIJING:AtomicNumber", A);
   add_arg<int>(pythia, "eHIJING:ChargeNumber", Z);
   add_arg<double>(pythia, "eHIJING:Kfactor", K);
-  add_arg<double>(pythia, "PhaseSpace:Q2Min", Q2s[iQ]);
-  add_arg<double>(pythia, "PhaseSpace:Q2Min", Q2s[iQ+1]);
+  add_arg<double>(pythia, "PhaseSpace:Q2Min", 1.0);
   double alpha_fix = EHIJING::alphas(pT2min);
   double alphabar = alpha_fix * EHIJING::CA/M_PI;
   pythia.init();
@@ -199,6 +300,7 @@ int main(int argc, char *argv[]) {
 
   // Begin event loop.
   int Ntriggered = 0;
+  int Nt1 = 0, Nt2 = 0;
   int count = 0, failed=0;
   while(Ntriggered<nEvent){
       count++;
@@ -217,6 +319,11 @@ int main(int argc, char *argv[]) {
       Vec4 pGamma = peIn - peOut; // virtual boson photon/Z^0/W^+-
       double Q20 = - pGamma.m2Calc(); // hard scale square
       double xB  = Q20 / (2. * pProton * pGamma); // Bjorken x
+      double nu = pGamma.e();
+      double W2 = (pProton + pGamma).m2Calc();
+      if (W2>4. && nu > 4.) Nt1 ++;
+      if (W2>4. && nu > 6.) Nt2 ++;
+
       auto & hardP = event[5];
       double kt2max_now = pT2min;
       double emin = .4;
@@ -241,13 +348,8 @@ int main(int argc, char *argv[]) {
           double L = eHIJING_Geometry.compute_L(event.Rx(), event.Ry(), event.Rz(),
                                             vx, vy, vz);
           double tau1 = 2.*p.e()/std::pow(p.scale(),2);
-          //if (p.id()==21) fstat << 111 << " " << xB << " " << Q20 << " " << pGamma.e() << " " << tau1 << " " << std::pow(p.scale(),2) << " " << 0 <<" "<< 0 << " " << p.e() << " " << L << std::endl;
           int Ncolls = ts.size();
-          if (Ncolls==0) {
-              //if (p.id()==hardP.id())
-              //    fstat << Ncolls << " " << Nhard_rad << " " << 0 << std::endl;
-              continue;
-          }
+          if (Ncolls==0) continue;
           double sumq2 = 0.;
           for (auto & q2 : qt2s) sumq2 += q2;
           if (mode==0 && sumq2<1e-9) continue;
@@ -411,7 +513,6 @@ int main(int argc, char *argv[]) {
               kmu.e(std::sqrt(kmu.pAbs2()));
 
               taufmax = 2.*p.e()/EHIJING::mu2;
-              //fstat << 222 << " " << xB << " " << Q20 << " " << pGamma.e() << " " << tauf << " " << lt2 << " " << kt2 << " " << z << " " << kmu.e() << " " << L << std::endl;
               // update the color if it is a hard gluon
               // first, the spliting process
               int k_col, k_acol;
@@ -675,9 +776,6 @@ int main(int argc, char *argv[]) {
            }
            for (auto & p : frag_gluons) all_extra.push_back(p);
            for (auto & p : recoil_remnants) all_extra.push_back(p);
-
-           //if (p.id()==hardP.id())
-           //    fstat << Ncolls << " " << Nhard_rad << " " << Nrad << std::endl;
         }
 
 
@@ -689,11 +787,61 @@ int main(int argc, char *argv[]) {
         // put the parton level event into a separate hadronizer
         auto event2 = HZ.hadronize(pythia, Z, A);
         // output
-        output<std::vector<Particle> >(pythia, event2, f);
+        FScount(pythia, event2);
     }
     std::cout << "TriggerRate = " << Ntriggered*1./count << std::endl;
     std::cout << "FailedRate = " << failed*1./count<< std::endl;
-  }
+    for (int i=0; i<PIDS.size(); i++){
+        std::stringstream  ss;
+        ss << header << "/" << Z << "-" << A << "-DpT2_z-"<<PIDS[i]<< "-"<<process_id<<".dat";
+        std::ofstream f(ss.str());
+	for (int j=0; j<zbins.size()-1;j++)
+	  f << zbins[j] << " " << zbins[j+1] << " " << (zbins[j]+zbins[j+1])/2. << " " << DpT2_z[2*i][j]/(DpT2_z[2*i+1][j]+1e-9) << std::endl;
+        std::stringstream  ss2;
+        ss2 << header << "/" << Z << "-" << A << "-DpT2_xB-"<<PIDS[i]<< "-"<<process_id<<".dat";
+        std::ofstream f2(ss2.str());
+        for (int j=0; j<xBbins.size()-1;j++)
+          f2 << xBbins[j] << " " << xBbins[j+1] << " " << (xBbins[j]+xBbins[j+1])/2. << " " << DpT2_xB[2*i][j]/(DpT2_xB[2*i+1][j]+1e-9) << std::endl;
+        std::stringstream  ss3;
+        ss3 << header << "/" << Z << "-" << A << "-DpT2_nu-"<<PIDS[i]<< "-"<<process_id<<".dat";
+        std::ofstream f3(ss3.str());
+        for (int j=0; j<nubins.size()-1;j++)
+          f3 << nubins[j] << " " << nubins[j+1] << " " << (nubins[j]+nubins[j+1])/2. << " " << DpT2_nu[2*i][j]/(DpT2_nu[2*i+1][j]+1e-9) << std::endl;
+        std::stringstream  ss4;
+        ss4 << header << "/" << Z << "-" << A << "-DpT2_Q2-"<<PIDS[i]<< "-"<<process_id<<".dat";
+        std::ofstream f4(ss4.str());
+        for (int j=0; j<Q2bins.size()-1;j++)
+          f4 << Q2bins[j] << " " << Q2bins[j+1] << " " << (Q2bins[j]+Q2bins[j+1])/2. << " " << DpT2_Q2[2*i][j]/(DpT2_Q2[2*i+1][j]+1e-9) << std::endl;
+    }
+    for (int i=0; i<PIDS.size(); i++){
+        std::stringstream  ss;
+        ss << header << "/" << Z << "-" << A << "-dN_z-"<<PIDS[i]<< "-"<<process_id<<".dat";
+        std::ofstream f(ss.str());
+        for (int j=0; j<zbins.size()-1;j++)
+          f << zbins[j] << " " << zbins[j+1] << " " << (zbins[j]+zbins[j+1])/2. << " " << dNz[i][j]/Nt2 << std::endl;
+        std::stringstream  ss2;
+        ss2 << header << "/" << Z << "-" << A << "-dN_xB-"<<PIDS[i]<< "-"<<process_id<<".dat";
+        std::ofstream f2(ss2.str());
+        for (int j=0; j<xBbins.size()-1;j++)
+          f2 << xBbins[j] << " " << xBbins[j+1] << " " << (xBbins[j]+xBbins[j+1])/2. << " " << dNxB[i][j]/Nt2 << std::endl;
+        std::stringstream  ss3;
+        ss3 << header << "/" << Z << "-" << A << "-dN_nu-"<<PIDS[i]<< "-"<<process_id<<".dat";
+        std::ofstream f3(ss3.str());
+        for (int j=0; j<nubins.size()-1;j++)
+          f3 << nubins[j] << " " << nubins[j+1] << " " << (nubins[j]+nubins[j+1])/2. << " " << dNnu[i][j]/Nt1 << std::endl;
+        std::stringstream  ss4;
+        ss4 << header << "/" << Z << "-" << A << "-dN_Q2-"<<PIDS[i]<< "-"<<process_id<<".dat";
+        std::ofstream f4(ss4.str());
+        for (int j=0; j<Q2bins.size()-1;j++)
+          f4 << Q2bins[j] << " " << Q2bins[j+1] << " " << (Q2bins[j]+Q2bins[j+1])/2. << " " << dNQ2[i][j]/Nt2 << std::endl;
+        std::stringstream  ss5;
+        ss5 << header << "/" << Z << "-" << A << "-dN_pT-"<<PIDS[i]<< "-"<<process_id<<".dat";
+        std::ofstream f5(ss5.str());
+        for (int j=0; j<pTbins.size()-1;j++)
+          f5 << pTbins[j] << " " << pTbins[j+1] << " " << (pTbins[j]+pTbins[j+1])/2. << " " << dNpT[i][j]/Nt2 << std::endl;
+
+    }
+
     // Done.
     return 0;
 }
