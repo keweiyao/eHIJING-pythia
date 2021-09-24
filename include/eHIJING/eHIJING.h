@@ -166,7 +166,6 @@ private:
   double Qs2_self_consistent_eq(double Qs2, double TA, double Q2x);
   // self-consistently solve for Qs2(Q^2/x, TA)
   double compute_Qs2(double TA, double Q2xB);
-  double compute_Rg(double TA, double Q2xB, double l2);
 public:
   MultipleCollision(double K, double pG, double lG, double xG);
   // Tabulate Qs table
@@ -179,7 +178,7 @@ public:
   };
   // compute the qhat of a gluon
   double qhatA(double x, double Q2, double TA) {
-      return Kfactor_*rho0*Qs2(x, Q2, TA)/TA;
+      return rho0*Qs2(x, Q2, TA)/TA;
   };
   // compute the qhat of a quark
   double qhatF(double x, double Q2, double TA) {
@@ -193,10 +192,6 @@ public:
   void sample_single_qt2(int pid, double E, double L, double xB, double Q2,
                          double & qx, double & qy, double & xg, double & tq,
                          double minimum_q2);
-  // Collision rate with q2>l2
-  double conditioned_qhat_gluon(double l2, double TA, double xB, double Q2){
-      return Kfactor_*RateTable.interpolate({TA, std::log(Q2/xB), std::log(l2)});
-  }
 };
 
 // The main eHIJING class
@@ -239,54 +234,6 @@ public:
 };
 
 
-// The main eHIJING class
-class InMediumFragmentation: public MultipleCollision{
-private:
-    // mode=0: collinear H-T;
-    // mode=1: static&soft generalized H-T / GLV
-    const int mode_;
-    // A K factor enhancing the medium-induced term for testing,
-   const double Kfactor_;
-    // Parameters for kT-dependent gluon distribution
-    // PhiG(x, qt2) = N * (1-x)^powerG * x^lambdaG / qt2 / alphas(max(Qs2, qt2))
-    // N is determined such that integrate dx PhiG = integrate dN/dx x dx = <xg> =  momentum fraction of gluon
-    // Qs will be determined self-consistenly
-    const double powerG_;
-    const double lambdaG_;
-    // avg momentum fraction of gluon
-    const double avgxG_;
-    // Random number generators
-    std::random_device rd;
-    std::mt19937 gen;
-    std::uniform_real_distribution<double> flat_gen;
-    bool next_radiation_CHT(int pid, double E, double L,
-                        double xB, double Q20,
-                        double kt2_max, double kt2_min,
-                        double & omegaL, double & z);
-    bool next_radiation_GHT(int pid, double E, double L,
-                        double xB, double Q20,
-                        double kt2_max, double kt2_min,
-                        double & omegaL, double & z);
-public:
-    // constructor, given mode, the K factor, powerG, lambdaG, and xG
-    InMediumFragmentation(int mode, double K, double pG, double lG, double xG);
-    // Tabulate (if nessesary) genralized HT table
-    void Tabulate(std::filesystem::path table_path);
-    bool next_radiation(int pid, double E, double L,
-                        double xB, double Q20,
-                        double kt2_max, double kt2_min,
-                        double & omegaL, double & z){
-        if (mode_==0) return next_radiation_CHT(pid, E, L,
-                            xB, Q20,
-                            kt2_max, kt2_min,
-                            omegaL, z);
-        else return next_radiation_GHT(pid, E, L,
-                            xB, Q20,
-                            kt2_max, kt2_min,
-                            omegaL, z);
-    };
-
-};
 
 }
 

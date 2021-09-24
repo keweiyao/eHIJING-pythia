@@ -100,7 +100,7 @@ bool trigger(Pythia & pythia) {
 
     // In Breit frame, where gamma ~ (0,0,0,-Q),
     double y     = (pProton * pGamma) / (pProton * peIn);
-    return (1.0<Q2);
+    return (1.0<Q2) & (W2>10.) & (nu>0.) & (y<0.85);
 }
 
 template<typename T>
@@ -133,16 +133,16 @@ void output(Pythia & pythia, T & plist, ofstream & f){
          double xF = dot3(pGamma2, pbst);
          double z = p.e()/nu;
          //if (xF<0) continue;
-         if (z>z1) { z1 = z; c1 = p.charge();}
-         else if (z>z2) { z2 = z; c2 = p.charge();}
-         //auto prot = p.p();
-         //prot.rot(0, phi);
-         //prot.rot(theta, 0);
-         //f << p.id() << " " << z << " " << prot.pT() << " " << nu << " " << Q2 << std::endl;
+         //if (z>z1) { z1 = z; c1 = p.charge();}
+         //else if (z>z2) { z2 = z; c2 = p.charge();}
+         auto prot = p.p();
+         prot.rot(0, phi);
+         prot.rot(theta, 0);
+         f << p.id() << " " << z << " " << prot.pT() << " " << nu << " " << Q2 << std::endl;
         }
     }
     // exclude +- pairs
-    if (c1*c2>-.1) f << z1 << " " << z2 << " " << Q2 << " " << nu << " " << pythia.info.sigmaGen() << std::endl;
+    //if (c1*c2>-.1) f << z1 << " " << z2 << " " << Q2 << " " << nu << " " << pythia.info.sigmaGen() << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -178,8 +178,6 @@ int main(int argc, char *argv[]) {
   hadronizer HZ;
   EHIJING::NuclearGeometry  eHIJING_Geometry(A, Z);
   // Initialize
-  double Q2s[11]={1,2,3,4,5,6,8,10,20,40,100};
-  for (int iQ=0; iQ<10;iQ++){
   Pythia pythia;        // Generator
   Event& event = pythia.event; // Event record
   pythia.readFile("pythia-ep-settings.txt"); // read settings
@@ -190,8 +188,6 @@ int main(int argc, char *argv[]) {
   add_arg<int>(pythia, "eHIJING:AtomicNumber", A);
   add_arg<int>(pythia, "eHIJING:ChargeNumber", Z);
   add_arg<double>(pythia, "eHIJING:Kfactor", K);
-  add_arg<double>(pythia, "PhaseSpace:Q2Min", Q2s[iQ]);
-  add_arg<double>(pythia, "PhaseSpace:Q2Min", Q2s[iQ+1]);
   double alpha_fix = EHIJING::alphas(pT2min);
   double alphabar = alpha_fix * EHIJING::CA/M_PI;
   pythia.init();
@@ -693,7 +689,6 @@ int main(int argc, char *argv[]) {
     }
     std::cout << "TriggerRate = " << Ntriggered*1./count << std::endl;
     std::cout << "FailedRate = " << failed*1./count<< std::endl;
-  }
     // Done.
     return 0;
 }

@@ -374,25 +374,19 @@ def AvgKinematics_pt2():
 
 @plot
 def sudakov_fig():
-    fig, ax = plt.subplots(1,1,figsize=(textwidth*.5,textwidth*.5), sharex=True,sharey=True)
+    fig, ax = plt.subplots(1,1,figsize=(textwidth*.4,textwidth*.25), sharex=True,sharey=True)
     Neve = 1e4
-    for Z, A, name in zip([1,2,4,7,10,20, 36,54,82],[2,4,8,14,20,40,84,131,208],['d','He','Be','N','Ne','Ca', 'Kr','Xe','Pb']):
+    for Z, A, name in zip([54],[131],['Xe']):
         nc,nh,ns = np.loadtxt("Run/Sudakov/{}-{}-stat.dat".format(Z,A)).T
         nrad = nh+ns
-        P = ((nc==0)).sum()/Neve
-        ax.plot(A**.3333, P, 'k.', label='No collision (quark)' if A==2 else '')
-        P = ((nc>0) & (nrad==0) ).sum()/Neve
-        ax.plot(A**.3333, P, '.', color=cr, label='Collision w/o radiation' if A==2 else '')
-        P = ((nc>0) & (nrad>0)).sum()/Neve
-        ax.plot(A**.3333, P, '.', color=cb, label='Collision w/ radiation' if A==2 else '')
-    A = np.linspace(1,300,100)
-    ax.plot(A**.3333, np.exp(-A**.3333*.16),'k--', label=r"$\exp(-0.16 A^{1/3})$")
+        ax.hist(nc ,bins=[-.5,.5,1.5,2.5,3.5,4.5,5.5],density=True,histtype='step')
+
     ax.legend(loc='best', framealpha=.5)
-    ax.set_xlabel(r"$A^{1/3}$")
+    ax.set_xlabel(r"$N_{\rm coll}$")
     ax.set_ylabel("Prob.")
-    ax.set_ylim(0,1.3)
-    ax.set_xlim(1,7)
-    ax.set_xticks([1,3,5,7])
+    ax.set_ylim(0,.6)
+    ax.set_xlim(-.5,5)
+    ax.annotate("e-Xe", xy=(2,.4))
     set_tight(fig)
 
 # page 10 why differ at low multiplicuty
@@ -831,16 +825,16 @@ def Rz_pbar():
 
 @plot
 def Other_Qs():
-    Tamin = 0.05/5.076**2
+    Tamin = 0.1/5.076**2
     Tamax = 2.8/5.076**2
-    Ta = np.linspace(Tamin, Tamax, 21)
-    lnQ2x = np.linspace(np.log(1), np.log(1e3), 21)
-    Qs2_data = np.loadtxt("Run/Tables/Qs.dat").reshape(21,21)
+    Ta = np.linspace(Tamin, Tamax, 51)
+    lnQ2x = np.linspace(np.log(1), np.log(1e5), 51)
+    Qs2_data = np.loadtxt("Run/Tables/Qs.dat").reshape(51,51)
     from scipy.interpolate import interp1d
 
     fig, ax = plt.subplots(1,1, figsize=(textwidth*.4, textwidth*.4))
     x = np.exp(np.linspace(-4.1,0,21))
-    for ita, c in zip([-1,5],[cb,cr]):
+    for ita, c in zip([-1,10],[cb,cr]):
         ta = Ta[ita]
         Qs2 = interp1d(lnQ2x, Qs2_data[ita])
         y1 = Qs2( np.log(4/x))
@@ -849,29 +843,30 @@ def Other_Qs():
         ax.plot(x, y2, '--', color=c, label='$Q=4$ GeV')
         ax.fill_between(x, y1, y2, color=c, alpha=.3)
     ax.legend()
-    ax.set_ylabel(r"$Q_S^2$ [GeV${}^2$]")
-    ax.set_xlabel(r"$x_q$")
+    ax.set_ylabel(r"$Q_S^2$ [GeV${}$]")
+    ax.set_xlabel(r"$x_B$")
     ax.set_xlim(1e-2,1)
-    ax.set_ylim(0,.57)
+    ax.set_ylim(0,4)
     ax.annotate(r"$T_A={:1.2f}$ [fm${{}}^{{-2}}$]".format(Ta[-1]*5.076**2),
                xy=(.1, .88), xycoords="axes fraction", color=cb, fontsize=5)
     ax.annotate(r"$T_A={:1.2f}$ [fm${{}}^{{-2}}$]".format(Ta[5]*5.076**2),
                xy=(.1, .75), xycoords="axes fraction", color=cr, fontsize=5)
     ax.semilogx()
+    plt.tight_layout(True)
 
 
 @plot
 def Other_qhat():
-    Tamin = 0.05/5.076**2
+    Tamin = 0.02/5.076**2
     Tamax = 2.8/5.076**2
-    Ta = np.linspace(Tamin, Tamax, 21)
-    lnQ2x = np.linspace(np.log(1), np.log(1e3), 21)
-    Qs2_data = np.loadtxt("Run/Tables/Qs.dat").reshape(21,21)
+    Ta = np.linspace(Tamin, Tamax, 51)
+    lnQ2x = np.linspace(np.log(1), np.log(1e5), 51)
+    Qs2_data = np.loadtxt("Run/Tables/Qs.dat").reshape(51,51)
     from scipy.interpolate import interp1d
     rho0 = 0.17/5.076**3
     fig, ax = plt.subplots(1,1, figsize=(textwidth*.4, textwidth*.4))
     x = np.exp(np.linspace(-4.1,0,21))
-    for ita, c in zip([-1,5],[cb,cr]):
+    for ita, c in zip([-1,10],[cb,cr]):
         ta = Ta[ita]
         Qs2 = interp1d(lnQ2x, Qs2_data[ita])
         y1 = Qs2( np.log(4/x))/ta*rho0 * 5.076 * 4/9
@@ -883,13 +878,14 @@ def Other_qhat():
     ax.set_ylabel(r"$\hat{q}_F$ [GeV${}^2$/fm]")
     ax.set_xlabel(r"$x_q$")
     ax.set_xlim(1e-2,1)
-    ax.set_ylim(0,.03)
-    ax.set_yticks([0,.01,.02, .03])
+    ax.set_ylim(0,.06)
+    #ax.set_yticks([0,.01,.02, .03])
     ax.annotate(r"$T_A={:1.2f}$ [fm${{}}^{{-2}}$]".format(Ta[-1]*5.076**2),
                xy=(.1, .88), xycoords="axes fraction", color=cb, fontsize=5)
     ax.annotate(r"$T_A={:1.2f}$ [fm${{}}^{{-2}}$]".format(Ta[5]*5.076**2),
                xy=(.1, .75), xycoords="axes fraction", color=cr, fontsize=5)
     ax.semilogx()
+    plt.tight_layout(True)
 
 @plot
 def Other_xG():

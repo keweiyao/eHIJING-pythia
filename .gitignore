@@ -13,5 +13,6 @@ tmp/
 *.zip
 *.a
 *.so
+*/NERSC
 cpp_interface/results*/
 cpp_interface/Tables/
