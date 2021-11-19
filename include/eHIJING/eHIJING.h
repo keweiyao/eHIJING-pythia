@@ -16,7 +16,7 @@ double alphas(double Q2);
 // The normalization at given x and Q2 is choosen such that <x> of gluon is the user given value (~0.3--0.5)
 double PhiG(double x, double q2, double Qs2);
 // alphas*PhiG
-double alphas_PhiG(double x, double q2, double Qs2, double Q2x, double powerG, double lambdaG, double avgxG);
+double alphas_PhiG(double x, double q2, double Qs2, double Q2x, double powerG, double lambdaG);
 
 // A light-weighted N-dimensional table class that supports
 // 1) Setting and retriving data using linear or N-dim indices
@@ -38,6 +38,7 @@ public:
     table_nd(int dim, std::vector<int> shape, std::vector<double> gridmin, std::vector<double> gridmax):
     dim_(dim), power_dim_(std::pow(2,dim)), shape_(shape), grid_min_(gridmin), grid_max_(gridmax){
         step_.resize(dim_);
+	std::cout << "Tab init" << std::endl;
         for (int i=0; i<dim_; i++) step_[i] = (grid_max_[i]-grid_min_[i])/(shape_[i]-1);
         conj_size_.resize(dim_);
         conj_size_[dim_-1] = 1;
@@ -155,20 +156,17 @@ private:
   // Qs will be determined self-consistenly
   const double powerG_;
   const double lambdaG_;
-  // avg momentum fraction of gluon
-  const double avgxG_;
   // Random number generators
   std::random_device rd;
   std::mt19937 gen;
   std::uniform_real_distribution<double> flat_gen;
-  table_nd Qs2Table, RateTable;
+  table_nd Qs2Table;
   // the self consistent equation for Qs2: Qs2[Phi_G(Qs2), TA, x, Q2] - Qs2 = 0
   double Qs2_self_consistent_eq(double Qs2, double TA, double Q2x);
   // self-consistently solve for Qs2(Q^2/x, TA)
   double compute_Qs2(double TA, double Q2xB);
-  double compute_Rg(double TA, double Q2xB, double l2);
 public:
-  MultipleCollision(double K, double pG, double lG, double xG);
+  MultipleCollision(double K, double pG, double lG);
   // Tabulate Qs table
   void Tabulate(std::filesystem::path table_path);
   double Qs2(double x, double Q2, double TA) {
@@ -179,7 +177,7 @@ public:
   };
   // compute the qhat of a gluon
   double qhatA(double x, double Q2, double TA) {
-      return Kfactor_*rho0*Qs2(x, Q2, TA)/TA;
+      return rho0*Qs2(x, Q2, TA)/TA;
   };
   // compute the qhat of a quark
   double qhatF(double x, double Q2, double TA) {
@@ -193,10 +191,6 @@ public:
   void sample_single_qt2(int pid, double E, double L, double xB, double Q2,
                          double & qx, double & qy, double & xg, double & tq,
                          double minimum_q2);
-  // Collision rate with q2>l2
-  double conditioned_qhat_gluon(double l2, double TA, double xB, double Q2){
-      return Kfactor_*RateTable.interpolate({TA, std::log(Q2/xB), std::log(l2)});
-  }
 };
 
 // The main eHIJING class
@@ -213,8 +207,6 @@ private:
     // Qs will be determined self-consistenly
     const double powerG_;
     const double lambdaG_;
-    // avg momentum fraction of gluon
-    const double avgxG_;
     // Random number generators
     std::random_device rd;
     std::mt19937 gen;
@@ -222,8 +214,8 @@ private:
     table_nd GHT_Angular_Table;
     double compute_GHT_Angular_Table(double X, double Y);
 public:
-    // constructor, given mode, the K factor, powerG, lambdaG, and xG
-    eHIJING(int mode, double K, double pG, double lG, double xG);
+    // constructor, given mode, the K factor, powerG, lambdaG
+    eHIJING(int mode, double K, double pG, double lG);
     // Tabulate (if nessesary) genralized HT table
     void Tabulate(std::filesystem::path table_path);
     bool next_kt2_stochastic(double & kt2, int pid,
@@ -239,54 +231,6 @@ public:
 };
 
 
-// The main eHIJING class
-class InMediumFragmentation: public MultipleCollision{
-private:
-    // mode=0: collinear H-T;
-    // mode=1: static&soft generalized H-T / GLV
-    const int mode_;
-    // A K factor enhancing the medium-induced term for testing,
-   const double Kfactor_;
-    // Parameters for kT-dependent gluon distribution
-    // PhiG(x, qt2) = N * (1-x)^powerG * x^lambdaG / qt2 / alphas(max(Qs2, qt2))
-    // N is determined such that integrate dx PhiG = integrate dN/dx x dx = <xg> =  momentum fraction of gluon
-    // Qs will be determined self-consistenly
-    const double powerG_;
-    const double lambdaG_;
-    // avg momentum fraction of gluon
-    const double avgxG_;
-    // Random number generators
-    std::random_device rd;
-    std::mt19937 gen;
-    std::uniform_real_distribution<double> flat_gen;
-    bool next_radiation_CHT(int pid, double E, double L,
-                        double xB, double Q20,
-                        double kt2_max, double kt2_min,
-                        double & omegaL, double & z);
-    bool next_radiation_GHT(int pid, double E, double L,
-                        double xB, double Q20,
-                        double kt2_max, double kt2_min,
-                        double & omegaL, double & z);
-public:
-    // constructor, given mode, the K factor, powerG, lambdaG, and xG
-    InMediumFragmentation(int mode, double K, double pG, double lG, double xG);
-    // Tabulate (if nessesary) genralized HT table
-    void Tabulate(std::filesystem::path table_path);
-    bool next_radiation(int pid, double E, double L,
-                        double xB, double Q20,
-                        double kt2_max, double kt2_min,
-                        double & omegaL, double & z){
-        if (mode_==0) return next_radiation_CHT(pid, E, L,
-                            xB, Q20,
-                            kt2_max, kt2_min,
-                            omegaL, z);
-        else return next_radiation_GHT(pid, E, L,
-                            xB, Q20,
-                            kt2_max, kt2_min,
-                            omegaL, z);
-    };
-
-};
 
 }
 

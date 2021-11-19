@@ -28,7 +28,7 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
       FORCE)
 endif()
 
-foreach(App "ep-st")
+foreach(App "ep-st" "eic" "jlab" "emc")
 add_executable(${App} ./${App}.cpp)
 target_link_libraries(${App} ${PYTHIA8_LIBRARIES} ${GSL_LIBRARIES} -pthread -ldl)
 install(TARGETS ${App} DESTINATION bin)

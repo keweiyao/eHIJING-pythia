@@ -284,7 +284,6 @@ private:
   std::string eHIJING_table; // WK: eHIJING_table
   EHIJING::eHIJING * eHIJING_Gen;
   EHIJING::NuclearGeometry * eHIJING_Geometry;
-  EHIJING::MultipleCollision * Coll;
 
   // alphaStrong and alphaEM calculations.
   AlphaStrong alphaS;

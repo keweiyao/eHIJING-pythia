@@ -100,7 +100,7 @@ void TimeShower::init( BeamParticle* beamAPtrIn,
   eHIJING            = settingsPtr->flag("eHIJING:all");
   eHIJING_Kfactor    = settingsPtr->parm("eHIJING:Kfactor");
   eHIJING_mode       = settingsPtr->parm("eHIJING:Mode");
-  eHIJING_table      = "./Tables";
+  eHIJING_table      = settingsPtr->word("eHIJING:TablePath");
   AtomicNumber       = settingsPtr->parm("eHIJING:AtomicNumber");
   ChargeNumber       = settingsPtr->parm("eHIJING:ChargeNumber");
 
@@ -110,14 +110,9 @@ void TimeShower::init( BeamParticle* beamAPtrIn,
       eHIJING_Gen = new EHIJING::eHIJING(eHIJING_mode,
                                          eHIJING_Kfactor,
                                          settingsPtr->parm("eHIJING:xG-n"),
-                                         settingsPtr->parm("eHIJING:xG-lambda"),
-                                         settingsPtr->parm("eHIJING:xG-avgx"));
+                                         settingsPtr->parm("eHIJING:xG-lambda")
+                                          );
       eHIJING_Gen->Tabulate(eHIJING_table);
-      Coll = new EHIJING::MultipleCollision(eHIJING_Kfactor,
-                                        settingsPtr->parm("eHIJING:xG-n"),
-                                        settingsPtr->parm("eHIJING:xG-lambda"),
-                                        settingsPtr->parm("eHIJING:xG-avgx"));
-      Coll->Tabulate(eHIJING_table);
       std::cout << "Done <<" << std::endl;
   }
 
@@ -2114,6 +2109,25 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
   bool   mustFindRange = true;
   double emitCoefGlue_MedSumedContribution = 0.;
   double eHIJING_weight = 1.0;
+      Vec4 pProton = event[1].p(); // four-momentum of proton
+      Vec4 peIn    = event[4].p(); // incoming electron
+      Vec4 peOut   = event[6].p(); // outgoing electron
+      Vec4 pGamma = peIn - peOut; // virtual boson photon/Z^0/W^+-
+      Vec4 pCoM = pProton + peIn;
+      // Q2, W2, Bjorken x, y.
+      double Q20 = - pGamma.m2Calc(); // hard scale square
+      double Q0  = std::sqrt(Q20);
+      double W2 = (pProton + pGamma).m2Calc();
+      double xB  = Q20 / (2. * pProton * pGamma); // Bjorken x
+     Vec4 PinA = event[5].p();
+     PinA.bstback(pProton);
+    double vx = PinA.px()/PinA.e(),
+           vy = PinA.py()/PinA.e(),
+           vz = PinA.pz()/PinA.e();
+    double L0 = eHIJING_Geometry->compute_L(event.Rx(), event.Ry(), event.Rz(),
+                                      vx, vy, vz);
+
+  double Qs2 = eHIJING_Gen->Qs2(xB, Q20, std::max(L0,1.0)*EHIJING::rho0);
   // Add more headRoom if doing uncertainty variations
   // (to ensure at least a minimal number of failed branchings).
   doUncertaintiesNow   = doUncertainties;
@@ -2190,16 +2204,8 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
     }
 
     // WK >>>
-      Vec4 pProton = event[1].p(); // four-momentum of proton
-      Vec4 peIn    = event[4].p(); // incoming electron
-      Vec4 peOut   = event[6].p(); // outgoing electron
-      Vec4 pGamma = peIn - peOut; // virtual boson photon/Z^0/W^+-
-      Vec4 pCoM = pProton + peIn;
-      // Q2, W2, Bjorken x, y.
-      double Q20 = - pGamma.m2Calc(); // hard scale square
-      double Q0  = std::sqrt(Q20);
-      double W2 = (pProton + pGamma).m2Calc();
-      double xB  = Q20 / (2. * pProton * pGamma); // Bjorken x
+  double pT2min_in_A = pT2min;
+  event.setSeparationScale(pT2min_in_A);
 
     auto & p = event[dip.iRadiator]; // this is in the CoM frame of e+P
     // compute the velocity in the nuclear rest frame
@@ -2213,11 +2219,9 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
     if (!p.collset()) { // set multiple collisions only once
         p.ResetMultipleCollision();
         std::vector<double> qt2s, ts, phis;
-        Coll->sample_all_qt2(p.idAbs(), pinA.e(), L, xB, dip.pT2, qt2s, ts, phis);
+	eHIJING_Gen->MultipleCollision::sample_all_qt2(p.idAbs(), pinA.e(), L, xB, Q20, qt2s, ts, phis);
         p.AddMultipleCollision(ts, qt2s, phis);
     }
-    //double Qs2 = eHIJING_Gen->Qs2(xB, Q20, std::max(L,1.0)*EHIJING::rho0);
-    double pT2min_in_A = pT2min;
     eHIJING_weight = 1.0;
     // WK <<<
     // Pick pT2 (in overestimated z range) for fixed alpha_strong.
@@ -2260,7 +2264,7 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
 
     // Abort evolution if below cutoff scale, or below another branching.
     } else {
-        if ( dip.pT2 < pT2endDip) { dip.pT2 = 0.; return; }
+        if ( dip.pT2 < pT2endDip || dip.pT2<pT2min_in_A) { dip.pT2 = 0.; return; }
 
         // Pick kind of branching: X -> X g or g -> q qbar.
         dip.flavour  = 21;
@@ -2285,7 +2289,6 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
             dip.z = zMinAbs + (1. - 2. * zMinAbs) * rndmPtr->flat();
         }
         // WK <<
-        //std::cout << "rad step 1 " << dip.z << " " << dip.pT2 << std::endl;
         // Do not accept branching if outside allowed z range.
         double zMin = 0.5 - sqrtpos( 0.25 - dip.pT2 / dip.m2DipCorr );
         if (zMin < SIMPLIFYROOT) zMin = dip.pT2 / dip.m2DipCorr;
@@ -2429,12 +2432,7 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
         wt          = 1.0;
     }
   // Iterate until acceptable pT (or have fallen below pTmin).
-  //std::cout << "eHIJING_weight = " << eHIJING_weight << std::endl;
 } while (wt < rndmPtr->flat());
-//std::cout << endl;
-//std::cout << "rad step 3 " << dip.z << " " << dip.pT2 << " " << wt << std::endl;
-
-  //std::cout << "rad step 4 " << dip.z << " " << dip.pT2  << std::endl;
   // Store outcome of enhanced branching rate analysis.
   splittingNameNow = nameNow;
   if (canEnhanceET) {

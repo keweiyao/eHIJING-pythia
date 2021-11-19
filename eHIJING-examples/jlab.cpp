@@ -5,7 +5,7 @@ using namespace Pythia8;
 #include <sstream>
 #include <algorithm>
 #include <unistd.h>
-/*std::vector<int> PIDS({111,211, -211, 321,-321,2212,-2212});
+std::vector<int> PIDS({111,211, -211, 321,-321,2212,-2212});
 std::vector<double> zbins({1e-4,1e-3,1e-2,0.02,.03,0.04,0.06,0.08,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1});
 std::vector<double> Q2bins({1,1.5,2,2.5,3,4,6,8,10,15,20,25,50,81,200,400,800,1600});
 std::vector<double> xBbins({1e-6,1e-5,1e-4,2e-4,4e-4,7e-4,1e-3,
@@ -92,7 +92,7 @@ private:
     std::mt19937 gen; //Standard mersenne_twister_engine seeded with rd()
     std::uniform_real_distribution<double> dist;
 };
-*/
+
 template <class T>
 void add_arg(Pythia & pythia, std::string name, T value){
   std::stringstream ss;
@@ -116,14 +116,14 @@ bool trigger(Pythia & pythia) {
 
     // In Breit frame, where gamma ~ (0,0,0,-Q),
     double y     = (pProton * pGamma) / (pProton * peIn);
-    return (y<0.85) & (1.0<Q2) & (nu>4.) & (W2>4.);
+    return (y<0.85) & (1.0<Q2) & (2.2<nu) & (nu<4.25) & (W2>4.);
 }
 
-//std::vector<std::vector<double> > DpT2_z, DpT2_xB, DpT2_Q2, DpT2_nu;
-//std::vector<std::vector<double> > dNz, dNxB, dNQ2, dNnu, dNpT;
-//std::vector<std::vector<std::vector<double> > > dNzpT;
+std::vector<std::vector<double> > DpT2_z, DpT2_xB, DpT2_Q2, DpT2_nu;
+std::vector<std::vector<double> > dNz, dNxB, dNQ2, dNnu, dNpT;
+std::vector<std::vector<std::vector<double> > > dNzpT;
 
-/*void FScount(Pythia & pythia, std::vector<Particle> & plist){
+void FScount(Pythia & pythia, std::vector<Particle> & plist){
     // Compute four-momenta of proton, electron, virtual
     Vec4 pProton = pythia.event[1].p(); // four-momentum of proton
     Vec4 peIn    = pythia.event[4].p(); // incoming electron
@@ -157,52 +157,55 @@ bool trigger(Pythia & pythia) {
 	 double pT = prot.pT();
 	 double pT2 = pT*pT;
          // multiplicity
-	 if ( W2>4.0 && xF>0.
-	      ){
+	 if ( pT2<1.5){
              for (int ipid=0; ipid<PIDS.size();ipid++)
              if ( p.id()==PIDS[ipid] ) {
                  for (int i=0; i<nubins.size()-1;i++)
-                     if (nubins[i]<nu && nu<nubins[i+1] && z>.2)
+                     if (nubins[i]<nu && nu<nubins[i+1])
                          dNnu[ipid][i] += 1;
                  for (int i=0; i<xBbins.size()-1;i++)
-                     if (xBbins[i]<xB && xB<xBbins[i+1] && nu>6. && z>.2)
+                     if (xBbins[i]<xB && xB<xBbins[i+1])
                          dNxB[ipid][i] += 1;
 		 for (int i=0; i<Q2bins.size()-1;i++)
-                     if (Q2bins[i]<Q2 && Q2<Q2bins[i+1] && nu>6. && z>.2)
+                     if (Q2bins[i]<Q2 && Q2<Q2bins[i+1])
                          dNQ2[ipid][i] += 1;
                  for (int i=0; i<zbins.size()-1;i++)
-                     if (zbins[i]<z && z<zbins[i+1] && nu>6.)
+                     if (zbins[i]<z && z<zbins[i+1])
                          dNz[ipid][i] += 1;
                  for (int i=0; i<pTbins.size()-1;i++) {
-		     if (pTbins[i]<pT && pT<pTbins[i+1] && nu>6 && z>0.2)
+		     if (pTbins[i]<pT && pT<pTbins[i+1])
 			     dNpT[ipid][i] += 1.;
-                     if (pTbins[i]<pT && pT<pTbins[i+1] && nu>6 && z>0.2) {
-			 if (0.2<z && z<0.4 ) dNzpT[ipid][0][i] += 1;
-			 if (0.4<z && z<0.7 ) dNzpT[ipid][1][i] += 1;
-			 if (0.7<z && z<1. ) dNzpT[ipid][2][i] += 1;
+                     if (pTbins[i]<pT && pT<pTbins[i+1]) {
+			 if (0.3<z && z<0.4 ) dNzpT[ipid][0][i] += 1;
+			 if (0.4<z && z<0.5 ) dNzpT[ipid][1][i] += 1;
+			 if (0.5<z && z<0.6 ) dNzpT[ipid][2][i] += 1;
+	                 if (0.6<z && z<0.7 ) dNzpT[ipid][3][i] += 1;
+                         if (0.7<z && z<0.8 ) dNzpT[ipid][4][i] += 1;
+                         if (0.8<z && z<0.9 ) dNzpT[ipid][5][i] += 1;
+
                     }
 		 }
 	     }
 	 
          }
 	 // pT broadening:
-	 if (W2>10.){ 
+	 if (pT2<2){ 
              for (int ipid=0; ipid<PIDS.size();ipid++){
 	         if ( p.id()==PIDS[ipid] ) {
                      for (int i=0; i<nubins.size()-1;i++){
-	                 if (nubins[i]<nu && nu<nubins[i+1] && z>.2) {
+	                 if (nubins[i]<nu && nu<nubins[i+1] && z>.3) {
 		               DpT2_nu[2*ipid][i] += pT2;
         		       DpT2_nu[2*ipid+1][i] += 1.0;
 	                 }
 	             }
                      for (int i=0; i<xBbins.size()-1;i++){
-                         if (xBbins[i]<xB && xB<xBbins[i+1] && z>.2) {
+                         if (xBbins[i]<xB && xB<xBbins[i+1] && z>.3) {
                              DpT2_xB[2*ipid][i] += pT2;
                              DpT2_xB[2*ipid+1][i] += 1.0;
                          }
                      }
                      for (int i=0; i<Q2bins.size()-1;i++){
-                         if (Q2bins[i]<Q2 && Q2<Q2bins[i+1] && z>.2) {
+                         if (Q2bins[i]<Q2 && Q2<Q2bins[i+1] && z>.3) {
                              DpT2_Q2[2*ipid][i] += pT2;
                              DpT2_Q2[2*ipid+1][i] += 1.0;
                          }
@@ -218,9 +221,9 @@ bool trigger(Pythia & pythia) {
         }
      }
    }
-}*/
+}
 int main(int argc, char *argv[]) {
-  /*DpT2_z.resize(2*PIDS.size());
+  DpT2_z.resize(2*PIDS.size());
   for (auto& it:DpT2_z){
     it.resize(zbins.size()-1);
     for (auto& iit:it)iit=0.;
@@ -274,7 +277,7 @@ int main(int argc, char *argv[]) {
   for (auto& it:dNQ2){
     it.resize(Q2bins.size()-1);
     for (auto& iit:it)iit=0.;
-  }*/
+  }
 
   // commandline args
   int nEvent = atoi(argv[1]);
@@ -296,7 +299,7 @@ int main(int argc, char *argv[]) {
   int inuclei = 100000000
               +   Z*10000
               +   A*10;
-  //hadronizer HZ;
+  hadronizer HZ;
   EHIJING::NuclearGeometry  eHIJING_Geometry(A, Z);
   // Initialize
   Pythia pythia;        // Generator
@@ -314,8 +317,9 @@ int main(int argc, char *argv[]) {
                              pythia.settings.parm("eHIJING:xG-n"),
                              pythia.settings.parm("eHIJING:xG-lambda")
                       );
+  Coll.Tabulate(path);
   // output
-return 0;
+
   // Begin event loop.
   int Ntriggered = 0;
   int Nt1 = 0, Nt2 = 0;
@@ -331,7 +335,7 @@ return 0;
       if (Ntriggered%1000==0)  std::cout << "# of trigged events: "
                                << Ntriggered << std::endl;
 
-      /*Vec4 pProton = event[1].p(); // four-momentum of proton
+      Vec4 pProton = event[1].p(); // four-momentum of proton
       Vec4 peIn    = event[4].p(); // incoming electron
       Vec4 peOut   = event[6].p(); // outgoing electron
       Vec4 pGamma = peIn - peOut; // virtual boson photon/Z^0/W^+-
@@ -339,9 +343,7 @@ return 0;
       double xB  = Q20 / (2. * pProton * pGamma); // Bjorken x
       double nu = pGamma.e();
       double W2 = (pProton + pGamma).m2Calc();
-      if (W2>4. && nu > 4.) 
 	      Nt1 ++;
-      if (W2>4. && nu > 6.) 
 	      Nt2 ++;
 
       auto & hardP = event[5];
@@ -821,14 +823,13 @@ return 0;
                      p.px(), p.py(), p.pz(), p.e(), p.m());
 
         // put the parton level event into a separate hadronizer
-        //auto event2 = HZ.hadronize(pythia, Z, A);
+        auto event2 = HZ.hadronize(pythia, Z, A);
         // output
-        //FScount(pythia, event2);
-      */
+        FScount(pythia, event2);
     }
     std::cout << "TriggerRate = " << Ntriggered*1./count << std::endl;
     std::cout << "FailedRate = " << failed*1./count<< std::endl;
-    /*for (int i=0; i<PIDS.size(); i++){
+    for (int i=0; i<PIDS.size(); i++){
         std::stringstream  ss;
         ss << header << "/" << Z << "-" << A << "-DpT2_z-"<<PIDS[i]<< "-"<<process_id<<".dat";
         std::ofstream f(ss.str());
@@ -874,7 +875,7 @@ return 0;
         std::stringstream  ss5;
         ss5 << header << "/" << Z << "-" << A << "-dN_z_pT-"<<PIDS[i]<< "-"<<process_id<<".dat";
         std::ofstream f5(ss5.str());
-        for (int iz=0; iz<3; iz++) 
+        for (int iz=0; iz<6; iz++) 
 	    for (int j=0; j<pTbins.size()-1;j++)
                 f5 << pTbins[j] << " " << pTbins[j+1] << " " << (pTbins[j]+pTbins[j+1])/2. << " " << dNzpT[i][iz][j]/Nt2 << std::endl;
 	std::stringstream  ss6;
@@ -885,7 +886,7 @@ return 0;
 
 
     }
-*/
+
     // Done.
     return 0;
 }

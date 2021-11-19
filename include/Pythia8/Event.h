@@ -650,10 +650,11 @@ public:
   const double Rx()const{ return Rx_;}
   const double Ry()const{ return Ry_;}
   const double Rz()const{ return Rz_;}
+  const double SeparationScale()const{return separationScale_;}
   void setRx(const double & a) {Rx_ = a;}
   void setRy(const double & a) {Ry_ = a;}
   void setRz(const double & a) {Rz_ = a;}
-
+  void setSeparationScale(const double & a) {separationScale_ = a;}
 private:
 
   // The Particle class needs to access particle data.
@@ -687,7 +688,7 @@ private:
 
   // Hard vertex location
   double Rx_, Ry_, Rz_;
-
+  double separationScale_;
   // Pointer to the particle data table.
   // The //! below is ROOT notation that this member should not be saved.
   ParticleData* particleDataPtr;  //!

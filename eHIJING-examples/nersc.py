@@ -156,30 +156,7 @@ scaled = False
 Ks = ['0d5','1','2']
 ModelK = Ks
 iKs = [0.5, 1,2]
-entry = ['id','z','pT','nu','Q2']
-rerun = True
-outfile = "Production-pTbroadening.h5"
-if rerun:
-    f = h5py.File(outfile,'w')
-    for group in Models:
-        if group in f:
-            del f[group]
-        g = f.create_group(group)
-        for K in Ks:
-            folder = "Run/Production/pTbroadening/{}/{}/".format(group, K)
-            if not os.path.exists(folder):
-                continue
-            g2 = g.create_group(K)
-            for N, Z, A in zip(['d', *NCZA[0]],
-                               [ 1,   2,    10,   36,   54],
-                               [ 2,   4,    20,   84,   131]):
-                print(group, K, N)
-                data = np.loadtxt(folder+"/{}-{}-cutRA.dat".format(Z,A)).T
-                g3 = g2.create_group(N)
-                for name, ds in zip(entry, data):
-                    g3.create_dataset(name, data=ds)
-print("loading")
-f0 = h5py.File(outfile,'r')
+
 sid = {211:'pi+', -211:'pi-', 111:'pi0',
    321:'K+',  -321:'K-',
    2212:'p',  -2212:'pbar'}
@@ -198,46 +175,20 @@ def DpT2_x(iid):
         for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
             ax.fill_between([il,ih],[yl,yl],[yh,yh],
                             edgecolor='k',facecolor='none')
-    bins = np.exp(np.linspace(np.log(.01),np.log(1.0),5))
-    db = bins[1:]-bins[:-1]
-    x = (bins[1:]+bins[:-1])/2.
+    
     for model, color, label in zip(Models, ModelColors, labels):
         YK0 = []
         for K in Ks:
-            pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-            pT2 = pT**2
-            xB = Q2/2./0.938/nu
-            cut = (pid==iid) & (nu<23) & (z>.2)
-            binv = xB[cut]
-            wv = pT2[cut]
-            X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                 / np.histogram(binv, bins=bins)[0]
-            X2 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                 / np.histogram(binv, bins=bins)[0]
-            Neff = np.histogram(binv, bins=bins)[0]
-            dY0 = np.sqrt((X2-X1**2)/Neff)
-            Y0 = np.copy(X1)
-            YK0.append(Y0)
+            files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/xB/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
         for ax,N,_,Z,A in zip(axes,*NCZA):
             YK1 = []
             for K in Ks:
-                pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
-                pT2 = pT**2
-                xB = Q2/2./nu/.938
-                cut = (pid==iid) & (nu<23) & (z>.2)
-                binv = xB[cut]
-                wv = pT2[cut]
-                X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                     / np.histogram(binv, bins=bins)[0]
-                X2 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                     / np.histogram(binv, bins=bins)[0]
-                Neff = np.histogram(binv, bins=bins)[0]
-                dY = np.sqrt((X2-X1**2)/Neff)
-                Y = np.copy(X1)
-                YK1.append(Y)
-            #Y = np.array(Y) - Y0
-            #dY = np.sqrt(dY**2+dY0**2)
-            #ax.(x, Y, yerr=dY, color=color, alpha=.7, label=label if ax.is_first_col() else '')
+                files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/xB/*".format(model,Z,A,iid,K))
+                print("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/xB/*".format(model,Z,A,iid,K))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
             ax.fill_between(x, YK1[0]-YK0[0], YK1[2]-YK0[2],
                             color=color, alpha=.7, label=label if ax.is_first_col() else '')
             ax.plot(x, YK1[1]-YK0[1], color=color)
@@ -266,47 +217,18 @@ def DpT2_z(iid):
         for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
             ax.fill_between([il,ih],[yl,yl],[yh,yh],
                             edgecolor='k',facecolor='none')
-    bins = np.array([0.2,.3,.4, 0.5, 0.7, .9, 1.1])
-    print(bins)
-    db = bins[1:]-bins[:-1]
-    x = (bins[1:]+bins[:-1])/2.
     for model, color, label in zip(Models, ModelColors, labels):
         YK0 = []
         for K in Ks:
-            pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-            pT2 = pT**2
-            xB = Q2/2./0.938/nu
-            cut = (pid==iid)
-            binv = z[cut]
-            wv = pT2[cut]
-            X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                 / np.histogram(binv, bins=bins)[0]
-            X2 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                 / np.histogram(binv, bins=bins)[0]
-            Neff = np.histogram(binv, bins=bins)[0]
-            dY0 = np.sqrt((X2-X1**2)/Neff)
-            Y0 = np.copy(X1)
-            YK0.append(Y0)
+            files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/z/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
         for ax,N,_,Z,A in zip(axes,*NCZA):
             YK1 = []
             for K in Ks:
-                pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
-                pT2 = pT**2
-                xB = Q2/2./nu/.938
-                cut = (pid==iid)
-                binv = z[cut]
-                wv = pT2[cut]
-                X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                     / np.histogram(binv, bins=bins)[0]
-                X2 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                     / np.histogram(binv, bins=bins)[0]
-                Neff = np.histogram(binv, bins=bins)[0]
-                dY = np.sqrt((X2-X1**2)/Neff)
-                Y = np.copy(X1)
-                YK1.append(Y)
-            #Y = np.array(Y) - Y0
-            #dY = np.sqrt(dY**2+dY0**2)
-            #ax.(x, Y, yerr=dY, color=color, alpha=.7, label=label if ax.is_first_col() else '')
+                files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/z/*".format(model,Z,A,iid,K))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
             ax.fill_between(x, YK1[0]-YK0[0], YK1[2]-YK0[2],
                             color=color, alpha=.7, label=label if ax.is_first_col() else '')
             ax.plot(x, YK1[1]-YK0[1], color=color)
@@ -340,40 +262,15 @@ def DpT2_nu(iid):
     for model, color, label in zip(Models, ModelColors, labels):
         YK0 = []
         for K in Ks:
-            pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-            pT2 = pT**2
-            xB = Q2/2./0.938/nu
-            cut = (pid==iid) & (z>.2)
-            binv = nu[cut]
-            wv = pT2[cut]
-            X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                 / np.histogram(binv, bins=bins)[0]
-            X2 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                 / np.histogram(binv, bins=bins)[0]
-            Neff = np.histogram(binv, bins=bins)[0]
-            dY0 = np.sqrt((X2-X1**2)/Neff)
-            Y0 = np.copy(X1)
-            YK0.append(Y0)
+            files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/nu/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
         for ax,N,_,Z,A in zip(axes,*NCZA):
             YK1 = []
             for K in Ks:
-                pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
-                pT2 = pT**2
-                xB = Q2/2./nu/.938
-                cut = (pid==iid) & (z>.2)
-                binv = nu[cut]
-                wv = pT2[cut]
-                X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                     / np.histogram(binv, bins=bins)[0]
-                X2 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                     / np.histogram(binv, bins=bins)[0]
-                Neff = np.histogram(binv, bins=bins)[0]
-                dY = np.sqrt((X2-X1**2)/Neff)
-                Y = np.copy(X1)
-                YK1.append(Y)
-            #Y = np.array(Y) - Y0
-            #dY = np.sqrt(dY**2+dY0**2)
-            #ax.(x, Y, yerr=dY, color=color, alpha=.7, label=label if ax.is_first_col() else '')
+                files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/nu/*".format(model,Z,A,iid,K))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
             ax.fill_between(x, YK1[0]-YK0[0], YK1[2]-YK0[2],
                             color=color, alpha=.7, label=label if ax.is_first_col() else '')
             ax.plot(x, YK1[1]-YK0[1], color=color)
@@ -400,46 +297,18 @@ def DpT2_Q2(iid):
         for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
             ax.fill_between([il,ih],[yl,yl],[yh,yh],
                             edgecolor='k',facecolor='none')
-    bins = np.array([x[0]*1.5-x[1]*.5, *((x[1:]+x[:-1])/2.), x[-1]*1.5-x[-2]*.5])
-    db = bins[1:]-bins[:-1]
-    x = (bins[1:]+bins[:-1])/2.
     for model, color, label in zip(Models, ModelColors, labels):
         YK0 = []
         for K in Ks:
-            pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-            pT2 = pT**2
-            xB = Q2/2./0.938/nu
-            cut = (pid==iid) & (z>.2)
-            binv = Q2[cut]
-            wv = pT2[cut]
-            X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                 / np.histogram(binv, bins=bins)[0]
-            X2 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                 / np.histogram(binv, bins=bins)[0]
-            Neff = np.histogram(binv, bins=bins)[0]
-            dY0 = np.sqrt((X2-X1**2)/Neff)
-            Y0 = np.copy(X1)
-            YK0.append(Y0)
+            files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/Q2/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
         for ax,N,_,Z,A in zip(axes,*NCZA):
             YK1 = []
             for K in Ks:
-                pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
-                pT2 = pT**2
-                xB = Q2/2./nu/.938
-                cut = (pid==iid) & (z>.2)
-                binv = Q2[cut]
-                wv = pT2[cut]
-                X1 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                     / np.histogram(binv, bins=bins)[0]
-                X2 = np.histogram(binv, weights=wv, bins=bins)[0] \
-                     / np.histogram(binv, bins=bins)[0]
-                Neff = np.histogram(binv, bins=bins)[0]
-                dY = np.sqrt((X2-X1**2)/Neff)
-                Y = np.copy(X1)
-                YK1.append(Y)
-            #Y = np.array(Y) - Y0
-            #dY = np.sqrt(dY**2+dY0**2)
-            #ax.(x, Y, yerr=dY, color=color, alpha=.7, label=label if ax.is_first_col() else '')
+                files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/Q2/*".format(model,Z,A,iid,K))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
             ax.fill_between(x, YK1[0]-YK0[0], YK1[2]-YK0[2],
                             color=color, alpha=.7, label=label if ax.is_first_col() else '')
             ax.plot(x, YK1[1]-YK0[1], color=color)
@@ -472,23 +341,18 @@ def RA_z(iid):
     db = bins[1:]-bins[:-1]
     for K, model, color, label in zip(ModelK, Models, ModelColors, labels):
         YK0 = []
-        for K in ModelK:
-            # e+d
-            pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-            cut = (pid==iid) & (nu>6)
-            Y0 = np.histogram(z[cut],bins=bins)[0]/db
-            YK0.append(Y0)
-        # e+A
+        for K in Ks:
+            files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/z/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
         for ax,N,_,Z,A in zip(axes,*NCZA):
             YK1 = []
-            for K in ModelK:
-                pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
-                cut = ( pid==iid ) & (nu>6)
-                Y = np.histogram(z[cut],bins=bins)[0]/db
-                YK1.append(Y)
-
-            ax.fill_between(x, YK1[0]/YK0[0], YK1[2]/YK0[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
-            ax.plot(x, YK1[1]/YK0[1], color=color)
+            for K in Ks:
+                files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/z/*".format(model,Z,A,iid,K))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
+            ax.fill_between(x[:-1], YK1[0][:-1]/YK0[0][:-1], YK1[2][:-1]/YK0[2][:-1], color=color, alpha=.7, label=label if ax.is_first_col() else '')
+            ax.plot(x[:-1], YK1[1][:-1]/YK0[1][:-1], color=color)
             ax.set_xlim(.1,1.05)
             ax.plot([.0,1.5],[1,1],'k-',lw=.3)
             if ax.is_first_col():
@@ -512,27 +376,21 @@ def RA_pT(iid):
         for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
             ax.fill_between([il,ih],[yl,yl],[yh,yh],
                             edgecolor='k',facecolor='none')
-    bins = np.array(list(xl)+[xh[-1]])
-    db = bins[1:]-bins[:-1]
     for K, model, color, label in zip(ModelK, Models, ModelColors, labels):
         YK0 = []
-        for K in ModelK:
-            # e+d
-            pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-            cut = (pid==iid) & (nu>6) & (z>.2)
-            Y0 = np.histogram((pT**2)[cut],bins=bins)[0]/db
-            YK0.append(Y0)
-        # e+A
+        for K in Ks:
+            files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/pT/*".format(model,1,2,iid,K))
+            print("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/pT/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
         for ax,N,_,Z,A in zip(axes,*NCZA):
             YK1 = []
-            for K in ModelK:
-                pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
-                cut = ( pid==iid ) & (nu>6) & (z>.2)
-                Y = np.histogram((pT**2)[cut],bins=bins)[0]/db
-                YK1.append(Y)
-
-            ax.fill_between(x, YK1[0]/YK0[0], YK1[2]/YK0[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
-            ax.plot(x, YK1[1]/YK0[1], color=color)
+            for K in Ks:
+                files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/pT/*".format(model,Z,A,iid,K))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
+            ax.fill_between(x**2, YK1[0]/YK0[0], YK1[2]/YK0[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
+            ax.plot(x**2, YK1[1]/YK0[1], color=color)
             ax.set_xlim(0,2.2)
             ax.plot([.0,2.2],[1,1],'k-',lw=.3)
             if ax.is_first_col():
@@ -560,20 +418,16 @@ def RA_nu(iid):
     db = bins[1:]-bins[:-1]
     for K, model, color, label in zip(ModelK, Models, ModelColors, labels):
         YK0 = []
-        for K in ModelK:
-            # e+d
-            pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-            cut = (pid==iid) & (z>.2)
-            Y0 = np.histogram(nu[cut],bins=bins)[0]/db
-            YK0.append(Y0)
-        # e+A
+        for K in Ks:
+            files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/nu/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
         for ax,N,_,Z,A in zip(axes,*NCZA):
             YK1 = []
-            for K in ModelK:
-                pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
-                cut = ( pid==iid )  & (z>.2)
-                Y = np.histogram(nu[cut],bins=bins)[0]/db
-                YK1.append(Y)
+            for K in Ks:
+                files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/nu/*".format(model,Z,A,iid,K))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
 
             ax.fill_between(x, YK1[0]/YK0[0], YK1[2]/YK0[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
             ax.plot(x, YK1[1]/YK0[1], color=color)
@@ -586,6 +440,37 @@ def RA_nu(iid):
             ax.set_xlim(0,25)
             ax.set_ylim(.2,1.4)
             ax.set_xlabel(r"$\nu$ [GeV]")
+    set_prelim(ax)
+    plt.subplots_adjust(wspace=0, left=.08, right=.99, bottom=.2, top=.88)
+
+
+def RA_xB(iid):
+    fig, axes = plt.subplots(1,4,figsize=(textwidth,.35*textwidth), sharey=True,sharex=True)
+    for K, model, color, label in zip(ModelK, Models, ModelColors, labels):
+        YK0 = []
+        for K in Ks:
+            files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/xB/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
+        for ax,N,_,Z,A in zip(axes,*NCZA):
+            YK1 = []
+            for K in Ks:
+                files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/xB/*".format(model,Z,A,iid,K))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
+
+            ax.fill_between(x, YK1[0]/YK0[0], YK1[2]/YK0[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
+            ax.plot(x, YK1[1]/YK0[1], color=color)
+            ax.set_xlim(0,25)
+            ax.plot([.0,25],[1,1],'k-',lw=.3)
+            if ax.is_first_col():
+                ax.legend(loc='best')
+                ax.set_ylabel(r"$R_{{A}}$")
+            ax.set_title(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]))
+            ax.set_xlim(2e-2,1)
+            ax.set_ylim(.2,1.4)
+            ax.semilogx()
+            ax.set_xlabel(r"$x_B$")
     set_prelim(ax)
     plt.subplots_adjust(wspace=0, left=.08, right=.99, bottom=.2, top=.88)
 
@@ -606,21 +491,17 @@ def RA_Q2(iid):
     db = bins[1:]-bins[:-1]
     for K, model, color, label in zip(ModelK, Models, ModelColors, labels):
         YK0 = []
-        for K in ModelK:
-            # e+d
-            pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-            cut = (pid==iid) & (z>.2)
-            Y0 = np.histogram(Q2[cut],bins=bins)[0]/db
-            YK0.append(Y0)
-        # e+A
+        for K in Ks:
+            files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/Q2/*".format(model,1,2,iid,K))
+            print("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/Q2/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
         for ax,N,_,Z,A in zip(axes,*NCZA):
             YK1 = []
-            for K in ModelK:
-                pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()] for it in entry]
-                cut = ( pid==iid )  & (z>.2) & (np.logical_not(np.isnan(z)))
-                Y = np.histogram(Q2[cut],bins=bins)[0]/db
-                YK1.append(Y)
-
+            for K in Ks:
+                files = glob.glob("NERSC/Results/HERMES-nPDF/dN/{}/{}-{}-{}/{}/Q2/*".format(model,Z,A,iid,K))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
             ax.fill_between(x, YK1[0]/YK0[0], YK1[2]/YK0[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
             ax.plot(x, YK1[1]/YK0[1], color=color)
             ax.set_xlim(0,16)
@@ -636,109 +517,104 @@ def RA_Q2(iid):
     plt.subplots_adjust(wspace=0, left=.08, right=.99, bottom=.2, top=.88)
 
 @plot
-def Flavor_RA():
-    fig, axes = plt.subplots(3,2,figsize=(textwidth*.6,.7*textwidth), sharex=True)
-    axes = axes.flatten()
-    ylims = [(.3,1.2),(.3,1.2),(.3,1.3),(.3,1.3),(0,1.4),(0,1.4)]
-    for ax, iid, ylim in zip(axes, [211,111,321,-321,2212,-2212],
-                             ylims):
-        ax.set_ylim(*ylim)
-        N,_,Z,A = [it[-1] for it in NCZA]
-        x,xl,xh,y,ystat,_,ysys,_ = \
-            np.loadtxt("Exp/HERMES/SIDIS/RA_z/e{}-{}.dat".format(N,sid[iid]),
-                 skiprows=12,
-                 delimiter=',').T
-        ax.errorbar(x,y,yerr=ystat,fmt='.', color='k',
-                 label=r'HERMES')
-        for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
-            ax.fill_between([il,ih],[yl,yl],[yh,yh],
-                            edgecolor='k',facecolor='none')
-        bins = np.array(list(xl)+[xh[-1]])
-        db = bins[1:]-bins[:-1]
-        print(db)
-        N = 'Xe'
-        for model, color, label in zip(Models, ModelColors, labels):
-            YK1 = []
-            for K in ModelK:
-                pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-                cut = (pid==iid) & (nu>6)  & (np.logical_not(np.isnan(z)))
-                Y0 = np.histogram(z[cut],bins=bins)[0]/db
-                pid, z, pT, nu, Q2 = [f0['{}/{}/{}/{}'.format(model,K,N,it)][()]
-                            for it in entry]
-                cut = ( pid==iid ) & (nu>6)  & (np.logical_not(np.isnan(z)))
-                Y = np.histogram(z[cut],bins=bins)[0]/db
-                Y = np.array(Y)/Y0
-                YK1.append(Y)
-            ax.fill_between(x, YK1[0], YK1[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
-            ax.plot(x, YK1[1], color=color)
-            if ax.is_last_col():
-                ax.set_yticks([])
-            ax.set_xlim(.05,1.15)
-            ax.set_xticks([0.2,0.4,.6,.8,1.])
-            ax.plot([.0,1.5],[1,1],'k-',lw=.3)
-            if ax.is_first_col():
-                ax.set_ylabel(r"$R_{{A}}$")
-            ax.annotate(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]),xy=(.25,.86),xycoords="axes fraction")
-
-            if ax.is_last_row():
-                ax.set_xlabel(r"$z_h$")
-    axes[4].legend(loc='lower left')
-    set_prelim(ax, xy=(.1,.05))
-
-    #set_tight(fig)
-    plt.subplots_adjust(wspace=0, hspace=0, top=.99, right=.98, left=.15,bottom=.1)
-
-"""
+def DpT2x_pip():
+    DpT2_x(211)
 @plot
-def zdiff_RApT():
-    fig, axes = plt.subplots(1,3,figsize=(textwidth*.8,.35*textwidth), sharey=True,sharex=True)
-    axes = axes.flatten()
-    iid = 211
-    N,_,Z,A = [it[-1] for it in NCZA]
-    for ax,zl,zh in zip(axes, [.2,.4,.7],[.4,.7,1.0]):
-        x,xl,xh,y,ystat,_,ysys,_ = \
-        np.loadtxt("Exp/HERMES/SIDIS/RA_z_pT/{}-pi-{}-{}.dat".format(N,zl,zh)
-                  ).T
-        ax.errorbar(x,y,yerr=ystat,fmt='.', color='k',
-                 label=r'HERMES')
-        for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
-            ax.fill_between([il,ih],[yl,yl],[yh,yh],
+def DpT2x_pim():
+    DpT2_x(-211)
+@plot
+def DpT2x_Kp():
+    DpT2_x(321)
+
+@plot
+def DpT2z_pip():
+    DpT2_z(211)
+@plot
+def DpT2z_pim():
+    DpT2_z(-211)
+@plot
+def DpT2z_Kp():
+    DpT2_z(321)
+
+
+@plot
+def DpT2Q2_pip():
+    DpT2_Q2(211)
+@plot
+def DpT2Q2_pim():
+    DpT2_Q2(-211)
+@plot
+def DpT2Q2_Kp():
+    DpT2_Q2(321)
+
+
+@plot
+def DpT2nu_pip():
+    DpT2_nu(211)
+@plot
+def DpT2nu_pim():
+    DpT2_nu(-211)
+@plot
+def DpT2nu_Kp():
+    DpT2_nu(321)
+
+#@plot
+def EIC_DpT2x():
+    iid=211
+    fig, ax = plt.subplots(1,1,figsize=(.5*textwidth,.35*textwidth), sharey=True,sharex=True)
+    N, Z, A = 'Xe', 54, 131
+    x,y,ystat,ysys =  np.loadtxt("pTbroadening-ExpData/pT2_vs_x/e{}-{}.dat".format(N,sid[iid])).T
+    ax.errorbar(x,y,yerr=ystat,fmt='.', color='k',label=r'HERMES')
+    bins = np.array([x[0]*1.5-x[1]*.5, *((x[1:]+x[:-1])/2.), x[-1]*1.5-x[-2]*.5])
+    xl = bins[:-1]
+    xh = bins[1:]
+    for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
+        ax.fill_between([il,ih],[yl,yl],[yh,yh],
                             edgecolor='k',facecolor='none')
-        bins = np.array(list(xl)+[xh[-1]])
-        db = bins[1:]-bins[:-1]
-
-        for model, color, label in zip(Models, ModelColors, labels):
-            YK = []
-            for K in ModelK:
-                # e+d
-                pid, z, pT, nu, Q2 = [f0['{}/{}/d/{}'.format(model,K,it)][()] for it in entry]
-                cut = ( pid==iid ) & (nu>6) & (zl<z) & (z<zh)
-                Y0 = np.histogram(pT[cut]**2,bins=bins)[0]/db
-                # e+A
-                #N = 'Xe'
-                pid, z, pT, nu, Q2 = [f0['{}/{}/Xe/{}'.format(model,K,it)][()]
-                              for it in entry]
-                cut = ( pid==iid ) & (nu>6) & (zl<z) & (z<zh)
-                Y = np.histogram(pT[cut]**2,bins=bins)[0]/db
-                Y = np.array(Y)/Y0
-                YK.append(Y)
-
-            ax.fill_between(x, YK[0], YK[2], color=color, alpha=.7, label=label if ax.is_first_col() else '')
-            ax.plot(x, YK[1], color=color)
-            ax.set_xlim(0,1.9)
-            ax.plot([.0,2],[1,1],'k-',lw=.3)
-            if ax.is_first_col():
-
-                ax.set_ylabel(r"$R_{{A}}$")
-            ax.annotate(r"${}<z_h<{}$".format(zl,zh),xy=(.1,.86),xycoords="axes fraction")
-            ax.set_ylim(0,2)
-            if ax.is_last_row():
-                ax.set_xlabel(r"$p_T^2$ [GeV${}^2$]")
-    axes[0].legend(loc='lower right')
-    plt.suptitle(r"$e+{{\rm {:s}}}\rightarrow \pi^{{\pm}}+\cdots$".format(N))
-
+    
+    for model, color, label in zip(Models[:1], ModelColors, labels):
+        YK0 = []
+        for K in Ks:
+            files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/xB/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK0.append(y)
+        YK1 = []
+        for K in Ks:
+            files = glob.glob("NERSC/Results/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/xB/*".format(model,Z,A,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            YK1.append(y)
+        ax.fill_between(x[:-1], YK1[0][:-1]-YK0[0][:-1], YK1[2][:-1]-YK0[2][:-1],
+                            color=color, alpha=.7, label=label+r", $\sqrt{s}=7.2$ GeV" if ax.is_first_col() else '') 
+        iii = [(0,1),(1,2),(2,3),(3,4),(4,5),(5,6),(6,7)]
+        YK0 = []
+        for K in Ks[::2]:
+            files = glob.glob("NERSC/EICResults/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/xB/*".format(model,1,2,iid,K))
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            x = np.array([x[il:ih].mean() for (il,ih)in iii])
+            y = np.array([y[il:ih].mean() for (il,ih)in iii])
+            YK0.append(y)
+        YK1 = []
+        for K in Ks[::2]:
+            files = glob.glob("NERSC/EICResults/HERMES-nPDF/DpT2/{}/{}-{}-{}/{}/xB/*".format(model,Z,A,iid,K))
+            
+            xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+            x = np.array([x[il:ih].mean() for (il,ih)in iii])
+            y = np.array([y[il:ih].mean() for (il,ih)in iii])
+            YK1.append(y)
+        ax.fill_between(x, YK1[0]-YK0[0], YK1[1]-YK0[1],
+                            facecolor='none', edgecolor=cr, hatch='////', alpha=.7, label=label+r", $\sqrt{s}=60$ GeV" if ax.is_first_col() else '')
+        ax.set_xlim(2e-4,1.0)
+        ax.plot([1e-4,1.0],[0,0],'k-',lw=.3)
+        if ax.is_first_col():
+            ax.legend(loc=(.4,.6))
+            ax.set_ylabel(r"$\Delta\langle p_T^2\rangle$ [GeV${}^2$]" if not scaled \
+                         else r"$\Delta\langle p_T^2\rangle / K$")
+        ax.set_title(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]))
+        ax.set_ylim(0,.15)
+        ax.set_xlabel(r"$x_B$")
+        ax.semilogx()
     set_prelim(ax)
-    plt.subplots_adjust(wspace=0, left=.1, right=.99, bottom=.25, top=.9)
+    plt.subplots_adjust(wspace=0, left=.22, right=.96, bottom=.2, top=.88)
 
 
 @plot
@@ -827,51 +703,78 @@ def Rz_p():
 @plot
 def Rz_pbar():
     RA_z(-2212)
-"""
 
 @plot
-def DpT2x_pip():
-    DpT2_x(211)
+def RxB_pip():
+    RA_xB(111)
 @plot
-def DpT2x_pim():
-    DpT2_x(-211)
+def RxB_pip():
+    RA_xB(211)
 @plot
-def DpT2x_Kp():
-    DpT2_x(321)
+def RxB_pim():
+    RA_xB(-211)
+@plot
+def RxB_Kp():
+    RA_xB(321)
+@plot
+def RxB_Km():
+    RA_xB(-321)
+@plot
+def RxB_p():
+    RA_xB(2212)
+@plot
+def RxB_pbar():
+    RA_xB(-2212)
 
 @plot
-def DpT2z_pip():
-    DpT2_z(211)
-@plot
-def DpT2z_pim():
-    DpT2_z(-211)
-@plot
-def DpT2z_Kp():
-    DpT2_z(321)
-
-
-@plot
-def DpT2Q2_pip():
-    DpT2_Q2(211)
-@plot
-def DpT2Q2_pim():
-    DpT2_Q2(-211)
-@plot
-def DpT2Q2_Kp():
-    DpT2_Q2(321)
-
-
-@plot
-def DpT2nu_pip():
-    DpT2_nu(211)
-@plot
-def DpT2nu_pim():
-    DpT2_nu(-211)
-@plot
-def DpT2nu_Kp():
-    DpT2_nu(321)
-
-
+def NPDF_fig():
+    iid = 211
+    fig, axes = plt.subplots(1,4,figsize=(textwidth,.35*textwidth), sharey=True)
+    N, Z, A = 'Xe', 54, 131
+    mm = 'Collinear'#'Generalized'
+    for ax, obs, xlabel in zip(axes, ['xB','Q2','z','pT'],
+                               [r'$x_B$',r'$Q^2$ [GeV${}^2$]',r"$z_h$",r"$p_T^2$ [GeV${}^2$]"]):
+        if obs!='xB':
+            if obs!='pT':
+                x,xl,xh,y,ystat,_,ysys,_ = np.loadtxt("Exp/HERMES/SIDIS/RA_{}/e{}-{}.dat".format(obs,N,sid[iid]), delimiter=',',skiprows=12,).T
+            if obs=='pT':
+                x,xl,xh,y,ystat,_,ysys,_ = np.loadtxt("Exp/HERMES/SIDIS/RA_pT2/e{}-{}.dat".format(N,sid[iid]), delimiter=',',skiprows=12,).T
+            ax.errorbar(x,y,yerr=ystat,fmt='.', color='k',
+                 label=r'HERMES')
+            for il,ih,yl,yh in zip(xl,xh,y-ysys,y+ysys):
+                ax.fill_between([il,ih],[yl,yl],[yh,yh],
+                            edgecolor='k',facecolor='none')
+        for K, model, color, label in zip(ModelK, ['-nPDF','-PDF'], ModelColors, ['EPPS16','Isospin only']):
+            YK0 = []
+            for K in Ks:
+                files = glob.glob("NERSC/Results/HERMES{}/dN/{}/{}-{}-{}/{}/{}/*".format(model,mm,1,2,iid,K,obs))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK0.append(y)
+            YK1 = []
+            for K in Ks:
+                files = glob.glob("NERSC/Results/HERMES{}/dN/{}/{}-{}-{}/{}/{}/*".format(model,mm,Z,A,iid,K,obs))
+                xl,xh,x,y = np.average([np.loadtxt(f) for f in files], axis=0).T
+                YK1.append(y)
+            if obs =='pT':
+                x = x**2
+            ax.fill_between(x[:-1], YK1[0][:-1]/YK0[0][:-1], YK1[2][:-1]/YK0[2][:-1], edgecolor=cb, facecolor='none' if model=='-PDF' else cb, hatch='' if model=='-nPDF' else '////', alpha=.7, label=label if ax.is_first_col() else '')
+            ax.plot(x[:-1], YK1[1][:-1]/YK0[1][:-1], '-' if model=='-nPDF'else'--', color=cb)
+            
+            ax.plot([1e-4,1e2],[1,1],'k-',lw=.3)
+            if ax.is_first_col():
+                ax.legend(loc='best')
+                ax.set_ylabel(r"$R_{{A}}$")
+            ax.set_title(r"$e+{{\rm {:s}}}\rightarrow {:s}+\cdots$".format(N,ssid[iid]))
+            ax.set_ylim(.2,1.4)
+            ax.set_xlabel(xlabel)
+    axes[0].semilogx()
+    axes[0].set_xlim(1e-2,2e0)
+    axes[1].set_xlim(.25,80)
+    axes[1].semilogx()
+    axes[2].set_xlim(0,1.1)
+    axes[3].set_xlim(0,3)
+    set_prelim(ax)
+    plt.subplots_adjust(wspace=0, left=.08, right=.99, bottom=.2, top=.88)
 
 
 if __name__ == '__main__':

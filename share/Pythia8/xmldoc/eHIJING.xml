@@ -23,8 +23,8 @@
 <parm name="eHIJING:xG-lambda" default="-0.5" min="-0.99" max="0.0"> 
 </parm> 
 
-<parm name="eHIJING:xG-avgx" default="0.45" min="0.3" max="0.6"> 
-</parm> 
+<word name="eHIJING:TablePath" default="./eHIJING-Tables/"> 
+</word> 
  
 </chapter> 
  

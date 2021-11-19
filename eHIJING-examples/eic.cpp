@@ -5,7 +5,7 @@ using namespace Pythia8;
 #include <sstream>
 #include <algorithm>
 #include <unistd.h>
-/*std::vector<int> PIDS({111,211, -211, 321,-321,2212,-2212});
+std::vector<int> PIDS({211});
 std::vector<double> zbins({1e-4,1e-3,1e-2,0.02,.03,0.04,0.06,0.08,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1});
 std::vector<double> Q2bins({1,1.5,2,2.5,3,4,6,8,10,15,20,25,50,81,200,400,800,1600});
 std::vector<double> xBbins({1e-6,1e-5,1e-4,2e-4,4e-4,7e-4,1e-3,
@@ -18,7 +18,7 @@ std::vector<double> nubins({1,2,3,4,5,6,8,10,12,14,16,18,20,
 			    200,250,300,400,500,1000,2000,3000,4000,5000});
 std::vector<double> pTbins({.0,.025,.05,.1,
 		            .2,.3,.4,.5,.6,.7,.8,.9,1.0,
-			    1.1,1.2,1.3,1.4,1.6,1.8,2.0});
+			    1.1,1.2,1.3,1.4,1.6,1.8,2.0,2.5,3.0});
 
 class hadronizer{
 public:
@@ -92,7 +92,7 @@ private:
     std::mt19937 gen; //Standard mersenne_twister_engine seeded with rd()
     std::uniform_real_distribution<double> dist;
 };
-*/
+
 template <class T>
 void add_arg(Pythia & pythia, std::string name, T value){
   std::stringstream ss;
@@ -116,14 +116,14 @@ bool trigger(Pythia & pythia) {
 
     // In Breit frame, where gamma ~ (0,0,0,-Q),
     double y     = (pProton * pGamma) / (pProton * peIn);
-    return (y<0.85) & (1.0<Q2) & (nu>4.) & (W2>4.);
+    return (.01<y)&(y<0.95) & (1.0<Q2) & (Q2<9.0);
 }
 
-//std::vector<std::vector<double> > DpT2_z, DpT2_xB, DpT2_Q2, DpT2_nu;
-//std::vector<std::vector<double> > dNz, dNxB, dNQ2, dNnu, dNpT;
-//std::vector<std::vector<std::vector<double> > > dNzpT;
+std::vector<std::vector<double> > DpT2_z, DpT2_xB, DpT2_Q2, DpT2_nu;
+std::vector<std::vector<double> > dNz, dNxB, dNQ2, dNnu, dNpT;
+std::vector<std::vector<std::vector<double> > > dNzpT;
 
-/*void FScount(Pythia & pythia, std::vector<Particle> & plist){
+void FScount(Pythia & pythia, std::vector<Particle> & plist){
     // Compute four-momenta of proton, electron, virtual
     Vec4 pProton = pythia.event[1].p(); // four-momentum of proton
     Vec4 peIn    = pythia.event[4].p(); // incoming electron
@@ -157,8 +157,7 @@ bool trigger(Pythia & pythia) {
 	 double pT = prot.pT();
 	 double pT2 = pT*pT;
          // multiplicity
-	 if ( W2>4.0 && xF>0.
-	      ){
+	 if ( xF>0){
              for (int ipid=0; ipid<PIDS.size();ipid++)
              if ( p.id()==PIDS[ipid] ) {
                  for (int i=0; i<nubins.size()-1;i++)
@@ -186,23 +185,23 @@ bool trigger(Pythia & pythia) {
 	 
          }
 	 // pT broadening:
-	 if (W2>10.){ 
+	 if (xF>0.){ 
              for (int ipid=0; ipid<PIDS.size();ipid++){
 	         if ( p.id()==PIDS[ipid] ) {
                      for (int i=0; i<nubins.size()-1;i++){
-	                 if (nubins[i]<nu && nu<nubins[i+1] && z>.2) {
+	                 if (nubins[i]<nu && nu<nubins[i+1] && z>.5 && z<.8) {
 		               DpT2_nu[2*ipid][i] += pT2;
         		       DpT2_nu[2*ipid+1][i] += 1.0;
 	                 }
 	             }
                      for (int i=0; i<xBbins.size()-1;i++){
-                         if (xBbins[i]<xB && xB<xBbins[i+1] && z>.2) {
+                         if (xBbins[i]<xB && xB<xBbins[i+1] && z>.5 && z<.8) {
                              DpT2_xB[2*ipid][i] += pT2;
                              DpT2_xB[2*ipid+1][i] += 1.0;
                          }
                      }
                      for (int i=0; i<Q2bins.size()-1;i++){
-                         if (Q2bins[i]<Q2 && Q2<Q2bins[i+1] && z>.2) {
+                         if (Q2bins[i]<Q2 && Q2<Q2bins[i+1] && z>.5 && z<.8) {
                              DpT2_Q2[2*ipid][i] += pT2;
                              DpT2_Q2[2*ipid+1][i] += 1.0;
                          }
@@ -218,9 +217,9 @@ bool trigger(Pythia & pythia) {
         }
      }
    }
-}*/
+}
 int main(int argc, char *argv[]) {
-  /*DpT2_z.resize(2*PIDS.size());
+  DpT2_z.resize(2*PIDS.size());
   for (auto& it:DpT2_z){
     it.resize(zbins.size()-1);
     for (auto& iit:it)iit=0.;
@@ -274,7 +273,7 @@ int main(int argc, char *argv[]) {
   for (auto& it:dNQ2){
     it.resize(Q2bins.size()-1);
     for (auto& iit:it)iit=0.;
-  }*/
+  }
 
   // commandline args
   int nEvent = atoi(argv[1]);
@@ -296,7 +295,7 @@ int main(int argc, char *argv[]) {
   int inuclei = 100000000
               +   Z*10000
               +   A*10;
-  //hadronizer HZ;
+  hadronizer HZ;
   EHIJING::NuclearGeometry  eHIJING_Geometry(A, Z);
   // Initialize
   Pythia pythia;        // Generator
@@ -315,7 +314,7 @@ int main(int argc, char *argv[]) {
                              pythia.settings.parm("eHIJING:xG-lambda")
                       );
   // output
-return 0;
+
   // Begin event loop.
   int Ntriggered = 0;
   int Nt1 = 0, Nt2 = 0;
@@ -331,7 +330,7 @@ return 0;
       if (Ntriggered%1000==0)  std::cout << "# of trigged events: "
                                << Ntriggered << std::endl;
 
-      /*Vec4 pProton = event[1].p(); // four-momentum of proton
+      Vec4 pProton = event[1].p(); // four-momentum of proton
       Vec4 peIn    = event[4].p(); // incoming electron
       Vec4 peOut   = event[6].p(); // outgoing electron
       Vec4 pGamma = peIn - peOut; // virtual boson photon/Z^0/W^+-
@@ -339,9 +338,7 @@ return 0;
       double xB  = Q20 / (2. * pProton * pGamma); // Bjorken x
       double nu = pGamma.e();
       double W2 = (pProton + pGamma).m2Calc();
-      if (W2>4. && nu > 4.) 
 	      Nt1 ++;
-      if (W2>4. && nu > 6.) 
 	      Nt2 ++;
 
       auto & hardP = event[5];
@@ -821,14 +818,13 @@ return 0;
                      p.px(), p.py(), p.pz(), p.e(), p.m());
 
         // put the parton level event into a separate hadronizer
-        //auto event2 = HZ.hadronize(pythia, Z, A);
+        auto event2 = HZ.hadronize(pythia, Z, A);
         // output
-        //FScount(pythia, event2);
-      */
+        FScount(pythia, event2);
     }
     std::cout << "TriggerRate = " << Ntriggered*1./count << std::endl;
     std::cout << "FailedRate = " << failed*1./count<< std::endl;
-    /*for (int i=0; i<PIDS.size(); i++){
+    for (int i=0; i<PIDS.size(); i++){
         std::stringstream  ss;
         ss << header << "/" << Z << "-" << A << "-DpT2_z-"<<PIDS[i]<< "-"<<process_id<<".dat";
         std::ofstream f(ss.str());
@@ -885,7 +881,7 @@ return 0;
 
 
     }
-*/
+
     // Done.
     return 0;
 }
