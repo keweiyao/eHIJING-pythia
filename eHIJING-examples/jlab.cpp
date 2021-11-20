@@ -529,6 +529,8 @@ int main(int argc, char *argv[]) {
               kmu.rot(0., p.phi());
               p.p(p.p()-kmu);
               p.e(std::sqrt(p.pAbs2()+p.m2()));
+
+
               kmu.e(std::sqrt(kmu.pAbs2()));
 
               taufmax = 2.*p.e()/EHIJING::mu2;
@@ -537,7 +539,7 @@ int main(int argc, char *argv[]) {
               int k_col, k_acol;
 
 	      // the gluon can continue to collide 
-              std::vector<double> g_qt2s, g_ts, g_phis;
+             std::vector<double> g_qt2s, g_ts, g_phis;
               Coll.sample_all_qt2(21, kmu.e(), L, xB, Q20, g_qt2s, g_ts, g_phis);
               Vec4 Qtot{0.,0.,0.,0.};
 	      double e0 = kmu.e();
@@ -632,7 +634,7 @@ int main(int argc, char *argv[]) {
                                   kmu, 0.0, 0);
                 frag_gluons.push_back(gluon);
               }
-
+             
           }
           // Now handles recoil and remannts
           // if there are radiations, coil goes to radiations

@@ -2204,8 +2204,6 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
     }
 
     // WK >>>
-  double pT2min_in_A = pT2min;
-  event.setSeparationScale(pT2min_in_A);
 
     auto & p = event[dip.iRadiator]; // this is in the CoM frame of e+P
     // compute the velocity in the nuclear rest frame
@@ -2216,6 +2214,9 @@ void TimeShower::pT2nextQCD(double pT2begDip, double pT2sel,
            vz = pinA.pz()/pinA.e();
     double L = eHIJING_Geometry->compute_L(event.Rx(), event.Ry(), event.Rz(),
                                       vx, vy, vz);
+    double pT2min_in_A = std::max(pT2min, eHIJING_Gen->Qs2(xB, Q20, EHIJING::rho0*L));
+    event.setSeparationScale(pT2min_in_A);
+
     if (!p.collset()) { // set multiple collisions only once
         p.ResetMultipleCollision();
         std::vector<double> qt2s, ts, phis;

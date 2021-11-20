@@ -117,7 +117,7 @@ bool trigger(Pythia & pythia) {
 
     // In Breit frame, where gamma ~ (0,0,0,-Q),
     double y     = (pProton * pGamma) / (pProton * peIn);
-    return (y<0.85) & (2.0<Q2) & (nu>10.) & (x>0.02) & (costheta < costhetamax) & (peOut.e() > 20.0);
+    return (y<0.85) & (2.0<Q2) & (nu>10.) & (x>0.02) & (costheta < costhetamax) & (nu<80);
 }
 
 std::vector<std::vector<double> > DpT2_z, DpT2_xB, DpT2_Q2, DpT2_nu;
@@ -315,8 +315,9 @@ int main(int argc, char *argv[]) {
                              pythia.settings.parm("eHIJING:xG-n"),
                              pythia.settings.parm("eHIJING:xG-lambda")
                       );
+  Coll.Tabulate(path);
   // output
-
+  double mean_nu = 0.0, mean_Q2 = 0.0, mean_x = 0.0, mean=0.0;
   // Begin event loop.
   int Ntriggered = 0;
   int Nt1 = 0, Nt2 = 0;
@@ -329,6 +330,7 @@ int main(int argc, char *argv[]) {
       }; // skip bad events
       if (!trigger(pythia)) continue; // only study triggered events
       Ntriggered ++;
+
       if (Ntriggered%1000==0)  std::cout << "# of trigged events: "
                                << Ntriggered << std::endl;
 
@@ -337,20 +339,24 @@ int main(int argc, char *argv[]) {
       Vec4 peOut   = event[6].p(); // outgoing electron
       Vec4 pGamma = peIn - peOut; // virtual boson photon/Z^0/W^+-
       double Q20 = - pGamma.m2Calc(); // hard scale square
+      double Q = std::sqrt(Q20);
       double xB  = Q20 / (2. * pProton * pGamma); // Bjorken x
       double nu = pGamma.e();
       double W2 = (pProton + pGamma).m2Calc();
-      if (W2>4. && nu > 4.) 
-	      Nt1 ++;
-      if (W2>4. && nu > 6.) 
-	      Nt2 ++;
+      Nt1 ++;
+      Nt2 ++;
+
+      mean += 1.;
+      mean_nu += nu;
+      mean_Q2 +=Q20;
+      mean_x += xB;
 
       auto & hardP = event[5];
       double kt2max_now = event.SeparationScale();
       double alpha_fix = EHIJING::alphas(kt2max_now);
       double alphabar = alpha_fix * EHIJING::CA/M_PI;
 
-      double emin = .4;
+      double emin = .2;
       std::vector<Particle> all_extra;
       all_extra.clear();
       int Nhard_rad = 0;
@@ -544,7 +550,7 @@ int main(int argc, char *argv[]) {
 		 double qt = std::sqrt(g_qt2s[ig]);
                  double phi = g_phis[ig];
 
-		 Vec4 qmu{0., qt*std::cos(phi), qt*std::sin(phi), qt*qt/4./kmu.e()};
+		 Vec4 qmu{0., qt*std::cos(phi), qt*std::sin(phi), 0};
                  Qtot = Qtot + qmu; 
 	      }
 	      Qtot.rot(kmu.theta(), 0.);
@@ -646,13 +652,19 @@ int main(int argc, char *argv[]) {
                   double qT = std::sqrt(qt2s[j]), phiq = phis[j];
                          qx = qT*std::cos(phiq);
                          qy = qT*std::sin(phiq);
-                         qz = qT*qT/4./p.e();
+                         qz = -(Q/2 - std::sqrt(std::pow(Q/2.,2) - qT*qT)) * fg.e()/Q;
 
                   Vec4 qmu{qx, qy, qz, 0.};
                   qmu.rot(fg.theta(), 0.);
                   qmu.rot(0., fg.phi());
                   fg.p(fg.p()+qmu);
                   fg.e(fg.pAbs());
+
+                   /*Vec4 qmu2{0., 0, qz, 0};
+                   qmu2.rot(p.theta(), 0.);
+                   qmu2.rot(0., p.phi());
+                   p.p(p.p()+qmu2);
+                   p.e(std::sqrt(p.pAbs2()+p.m2()));*/
                   int q_col, q_acol;
                   // update color
                   if (std::rand()%2==0){
@@ -726,7 +738,7 @@ int main(int argc, char *argv[]) {
                    double qT = std::sqrt(qt2s[j]), phiq = phis[j];
                    double qx = qT*std::cos(phiq);
                    double qy = qT*std::sin(phiq);
-                   double qz = qT*qT/4./p.e();
+                   double qz = -(Q/2 - std::sqrt(std::pow(Q/2.,2) - qT*qT)) * p.e()/Q;
                    Vec4 qmu{qx, qy, qz, 0};
                    qmu.rot(p.theta(), 0.);
                    qmu.rot(0., p.phi());
@@ -885,7 +897,10 @@ int main(int argc, char *argv[]) {
 
 
     }
-
+    std::cout << " " <<
+      mean_nu/mean << " " <<
+      mean_Q2/mean << " " <<
+      mean_x/mean <<std::endl;
     // Done.
     return 0;
 }
